@@ -14,6 +14,7 @@ import { SortableContext, arrayMove } from '@dnd-kit/sortable';
 
 import { useTasksContext } from './hooks/useTasksContext';
 import { exportToExcel, exportToPDF } from './utils/taskUtils';
+import { useCaseDefinitions } from './utils/useCaseDefinitions';
 import Board from './components/Board';
 import Task from './components/Task';
 import Sidebar from './components/Sidebar';
@@ -253,7 +254,14 @@ function App() {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
             <div className="flex items-center gap-4 w-full sm:w-auto">
               <img src="/assets/AITaskSmasher-small.png" alt="TaskSmasher Logo" className="w-8 h-8" />
-              <h1 className="text-2xl font-bold text-gray-900">TaskSmasher</h1>
+              <h1 className="text-2xl font-bold text-gray-900">
+                TaskSmasher
+                {selectedUseCase && (
+                  <span className="font-medium" style={{ color: `var(--${selectedUseCase}-primary)` }}>
+                    {" "}{selectedUseCase ? useCaseDefinitions[selectedUseCase]?.label : ''}
+                  </span>
+                )}
+              </h1>
               <div className="ml-4 text-sm text-gray-500">AI-powered task management</div>
             </div>
             <div className="flex items-center gap-2 w-full sm:w-auto">

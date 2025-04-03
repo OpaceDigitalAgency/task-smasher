@@ -70,14 +70,12 @@ function Sidebar({ selectedUseCase, onSelectUseCase }: SidebarProps) {
       ref={containerRef}
       className="w-64 bg-white border-r border-gray-200 p-4 flex flex-col gap-2 shadow-sm z-10 transition-colors duration-300 ease-in-out relative overflow-hidden"
     >
-      <h2 className="text-lg font-semibold text-gray-900 mb-4">
-        Task Smasher for <span 
-          className="italic font-bold"
-          style={{ color: selectedUseCase ? `var(--${selectedUseCase}-primary)` : '' }}
-        >
-          {currentUseCaseLabel}
-        </span>
+      <h2 className="text-lg font-semibold text-gray-900 mb-2">
+        Use Case Categories
       </h2>
+      <p className="text-sm text-gray-600 mb-4">
+        Select a category below to create AI-generated tasks specific to that domain
+      </p>
       
       {/* Active smash effect (appears on click) */}
       {showSmashEffect && (
@@ -106,20 +104,27 @@ function Sidebar({ selectedUseCase, onSelectUseCase }: SidebarProps) {
             <button
               key={useCase.id}
               onClick={(e) => handleUseCaseClick(useCase.id, e)}
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-all duration-300 relative
-                ${isSelected 
-                  ? 'bg-indigo-50 text-indigo-700 shadow-sm scale-[1.02] font-medium' 
+              className={`flex flex-col items-start gap-1 px-3 py-2 rounded-lg text-left transition-all duration-300 relative
+                ${isSelected
+                  ? 'bg-indigo-50 text-indigo-700 shadow-sm scale-[1.02] font-medium'
                   : 'text-gray-700 hover:bg-gray-50'}`}
               style={{
                 backgroundColor: isSelected ? `var(--${useCase.id}-light)` : '',
                 color: isSelected ? `var(--${useCase.id}-primary)` : ''
               }}
             >
-              <Icon 
-                className={`w-5 h-5 transition-colors duration-300 ${isSelected ? 'text-indigo-600' : ''}`}
-                style={{ color: isSelected ? `var(--${useCase.id}-primary)` : '' }} 
-              />
-              <span>{useCase.label}</span>
+              <div className="flex items-center gap-3 w-full">
+                <Icon
+                  className={`w-5 h-5 transition-colors duration-300 ${isSelected ? 'text-indigo-600' : ''}`}
+                  style={{ color: isSelected ? `var(--${useCase.id}-primary)` : '' }}
+                />
+                <span className="font-medium">{useCase.label}</span>
+              </div>
+              {isSelected && (
+                <p className="text-xs text-gray-600 mt-1 pl-8">
+                  {useCaseDefinitions[useCase.id]?.description || ''}
+                </p>
+              )}
             </button>
           );
         })}

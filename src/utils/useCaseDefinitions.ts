@@ -46,7 +46,7 @@ export const useCaseDefinitions: Record<string, UseCaseDefinition> = {
       "recipe", "cook", "ingredient", "diy", "build", "paint",
       "shopping", "grocery", "personal", "home", "cleaning", "fix"
     ],
-    description: "Marketing campaigns, content creation, SEO, and advertising tasks"
+    description: "Marketing campaigns, content creation, SEO, and advertising tasks with project planning"
   },
   recipe: {
     label: "Recipe Steps",
@@ -60,7 +60,7 @@ export const useCaseDefinitions: Record<string, UseCaseDefinition> = {
       "marketing", "campaign", "seo", "email", "meeting", "work",
       "presentation", "analysis", "report", "review", "assignment"
     ],
-    description: "Cooking recipes, meal prep instructions, and kitchen tasks"
+    description: "Cooking recipes with ingredients, step-by-step instructions, and kitchen tasks"
   },
   home: {
     label: "Home Chores",
