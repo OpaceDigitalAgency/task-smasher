@@ -157,16 +157,19 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
                   event.headers["x-forwarded-for"] ||
                   "unknown-ip";
   
-  // Bypass rate limit for local development
+  // Check if it's local development
   const isLocalDev = clientIP === "::1" || clientIP === "127.0.0.1" || clientIP.startsWith("192.168.");
   if (isLocalDev) {
-    console.log("Local development detected, bypassing rate limit");
+    console.log("Local development detected, tracking rate limit but always allowing requests");
   }
   
-  // Check rate limit
-  const rateLimitResult = isLocalDev ?
-    { allowed: true, remaining: RATE_LIMIT - 1, resetTime: Date.now() + RATE_LIMIT_WINDOW, total: RATE_LIMIT } :
-    await checkRateLimit(clientIP);
+  // Always check rate limit, but for local dev we'll allow the request regardless
+  const rateLimitResult = await checkRateLimit(isLocalDev ? "local-dev" : clientIP);
+  
+  // For local development, we'll still track the rate limit but always allow the request
+  if (isLocalDev) {
+    rateLimitResult.allowed = true;
+  }
   
   if (!rateLimitResult.allowed) {
     const resetDate = new Date(rateLimitResult.resetTime).toISOString();
