@@ -33,10 +33,10 @@ function Sidebar({ selectedUseCase, onSelectUseCase }: SidebarProps) {
   useEffect(() => {
     const fullPath = location.pathname.substring(1); // Remove leading slash
     
-    // Check if the path starts with 'tools/task-smasher/'
-    if (fullPath.startsWith('tools/task-smasher/')) {
-      // Extract the use case part from the path
-      const path = fullPath.substring('tools/task-smasher/'.length);
+    // Check if there's a path
+    if (fullPath) {
+      // Use the full path
+      const path = fullPath;
       
       if (path) {
         const matchedUseCase = useCases.find(useCase =>
@@ -121,7 +121,7 @@ function Sidebar({ selectedUseCase, onSelectUseCase }: SidebarProps) {
           return (
             <Link
               key={useCase.id}
-              to={`/tools/task-smasher/${useCase.label.toLowerCase().replace(/\s+/g, '-')}`}
+              to={`/${useCase.label.toLowerCase().replace(/\s+/g, '-')}`}
               onClick={(e) => handleUseCaseClick(useCase.id, e)}
               className={`flex flex-col items-start gap-1 px-3 py-2 rounded-lg text-left transition-all duration-300 relative no-underline
                 ${isSelected
