@@ -5,7 +5,7 @@ import { validateTaskLocally, validateTaskWithAI } from '../utils/taskContextVal
 import OpenAIService from '../utils/openaiService';
 import useReCaptcha from './useReCaptcha';
 
-export function useTasks(): TasksContextType {
+export function useTasks(initialUseCase?: string): TasksContextType {
   // Removed openAIKey state as we're now using the proxy
   const [selectedModel, setSelectedModel] = useState('gpt-3.5-turbo');
   const [totalCost, setTotalCost] = useState(() => {
@@ -94,10 +94,10 @@ export function useTasks(): TasksContextType {
     }
   }, [selectedUseCase]);
 
-  // Initialize daily organizer as default on load
+  // Initialize with provided use case or default to daily organizer
   useEffect(() => {
-    handleSelectUseCase('daily');
-  }, []);
+    handleSelectUseCase(initialUseCase || 'daily');
+  }, [initialUseCase]);
   
   // Add CSS animation styles dynamically
   useEffect(() => {

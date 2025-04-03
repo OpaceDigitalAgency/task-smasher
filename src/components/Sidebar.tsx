@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Calendar, Target, MessageSquare, ChefHat, Home, Briefcase, Plane, ShoppingCart, GraduationCap, PartyPopper, Wrench, Palette } from 'lucide-react';
 import { useCaseDefinitions } from '../utils/useCaseDefinitions';
+import { Link, useLocation } from 'react-router-dom';
 
 interface SidebarProps {
   selectedUseCase: string | null;
@@ -26,13 +27,30 @@ function Sidebar({ selectedUseCase, onSelectUseCase }: SidebarProps) {
   const [smashPosition, setSmashPosition] = useState({ top: 0, left: 0 });
   const [showSmashEffect, setShowSmashEffect] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const location = useLocation();
   
-  // Set daily organizer as default on first render
+  // Determine the current use case from the URL path
   useEffect(() => {
-    if (!selectedUseCase) {
+    const fullPath = location.pathname.substring(1); // Remove leading slash
+    
+    // Check if the path starts with 'tools/task-smasher/'
+    if (fullPath.startsWith('tools/task-smasher/')) {
+      // Extract the use case part from the path
+      const path = fullPath.substring('tools/task-smasher/'.length);
+      
+      if (path) {
+        const matchedUseCase = useCases.find(useCase =>
+          useCase.label.toLowerCase().replace(/\s+/g, '-') === path.toLowerCase()
+        );
+        if (matchedUseCase && matchedUseCase.id !== selectedUseCase) {
+          onSelectUseCase(matchedUseCase.id);
+        }
+      }
+    } else if (!selectedUseCase) {
+      // Default to daily if no path and no selected use case
       onSelectUseCase('daily');
     }
-  }, [selectedUseCase, onSelectUseCase]);
+  }, [location, selectedUseCase, onSelectUseCase]);
   
   const handleUseCaseClick = (useCaseId: string, e: React.MouseEvent) => {
     // Only trigger animation if the use case is changing
@@ -101,10 +119,11 @@ function Sidebar({ selectedUseCase, onSelectUseCase }: SidebarProps) {
           const isSelected = selectedUseCase === useCase.id;
           
           return (
-            <button
+            <Link
               key={useCase.id}
+              to={`/tools/task-smasher/${useCase.label.toLowerCase().replace(/\s+/g, '-')}`}
               onClick={(e) => handleUseCaseClick(useCase.id, e)}
-              className={`flex flex-col items-start gap-1 px-3 py-2 rounded-lg text-left transition-all duration-300 relative
+              className={`flex flex-col items-start gap-1 px-3 py-2 rounded-lg text-left transition-all duration-300 relative no-underline
                 ${isSelected
                   ? 'bg-indigo-50 text-indigo-700 shadow-sm scale-[1.02] font-medium'
                   : 'text-gray-700 hover:bg-gray-50'}`}
@@ -125,7 +144,7 @@ function Sidebar({ selectedUseCase, onSelectUseCase }: SidebarProps) {
                   {useCaseDefinitions[useCase.id]?.description || ''}
                 </p>
               )}
-            </button>
+            </Link>
           );
         })}
       </div>

@@ -6,8 +6,14 @@ import { TasksContextType } from '../types';
 const TasksContext = createContext<TasksContextType | undefined>(undefined);
 
 // Provider component
-export const TasksProvider = ({ children }: { children: ReactNode }) => {
-  const tasksData = useTasks();
+export const TasksProvider = ({
+  children,
+  initialUseCase
+}: {
+  children: ReactNode;
+  initialUseCase?: string;
+}) => {
+  const tasksData = useTasks(initialUseCase);
   
   return <TasksContext.Provider value={tasksData}>{children}</TasksContext.Provider>;
 };
