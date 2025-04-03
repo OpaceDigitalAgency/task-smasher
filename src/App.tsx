@@ -326,16 +326,6 @@ function App() {
                 <span>Add Task</span>
               </button>
               
-              {/* Undo button in a more intuitive location */}
-              <button
-                onClick={handleUndo}
-                className="py-2 px-4 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 shadow-sm flex items-center gap-2 ml-2"
-                title="Undo last action"
-              >
-                <Undo className="w-5 h-5" />
-                <span>Undo</span>
-              </button>
-              
               <div className="relative">
                 <button
                   className="py-2 px-4 border border-gray-200 bg-white/80 backdrop-blur-sm hover:bg-gray-50 rounded-lg flex items-center gap-2 h-full transition-colors duration-200"
