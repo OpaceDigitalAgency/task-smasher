@@ -15,23 +15,23 @@ if (!root) throw new Error('Root element not found');
 const useCaseRoutes = Object.entries(useCaseDefinitions).map(([id, definition]) => (
   <Route
     key={id}
-    path={`/${definition.label.toLowerCase().replace(/\s+/g, '-')}`}
+    path={`/tools/task-smasher/${definition.label.toLowerCase().replace(/\s+/g, '-')}`}
     element={
       <>
         <Helmet>
           <title>{definition.label} | AI To-Do Lists & Project Planning | TaskSmasher</title>
           <meta name="description" content={`Organize your ${definition.label.toLowerCase()} with TaskSmasher's AI To-Do Lists & Project Planning tools. ${definition.description.substring(0, 70)}`} />
           <meta name="keywords" content={`${definition.label}, AI To-Do Lists, Project Planning, Task Management, ${definition.keywords.slice(0, 5).join(', ')}`} />
-          <link rel="canonical" href={`https://smashingapps.ai/${definition.label.toLowerCase().replace(/\s+/g, '-')}`} />
+          <link rel="canonical" href={`https://smashingapps.ai/tools/task-smasher/${definition.label.toLowerCase().replace(/\s+/g, '-')}`} />
           <meta property="og:title" content={`${definition.label} | AI To-Do Lists & Project Planning | TaskSmasher`} />
           <meta property="og:description" content={`Organize your ${definition.label.toLowerCase()} with TaskSmasher's AI To-Do Lists & Project Planning tools. ${definition.description.substring(0, 70)}`} />
           <meta property="og:type" content="website" />
-          <meta property="og:url" content={`https://smashingapps.ai/${definition.label.toLowerCase().replace(/\s+/g, '-')}`} />
-          <meta property="og:image" content="https://smashingapps.ai/assets/AITaskSmasher-small.png" />
+          <meta property="og:url" content={`https://smashingapps.ai/tools/task-smasher/${definition.label.toLowerCase().replace(/\s+/g, '-')}`} />
+          <meta property="og:image" content="https://smashingapps.ai/tools/task-smasher/assets/AITaskSmasher-small.png" />
           <meta name="twitter:card" content="summary" />
           <meta name="twitter:title" content={`${definition.label} | AI To-Do Lists & Project Planning | TaskSmasher`} />
           <meta name="twitter:description" content={`Organize your ${definition.label.toLowerCase()} with TaskSmasher's AI To-Do Lists & Project Planning tools.`} />
-          <meta name="twitter:image" content="https://smashingapps.ai/assets/AITaskSmasher-small.png" />
+          <meta name="twitter:image" content="https://smashingapps.ai/tools/task-smasher/assets/AITaskSmasher-small.png" />
         </Helmet>
         <TasksProvider initialUseCase={id}>
           <App />
@@ -48,22 +48,22 @@ createRoot(root).render(
         <TasksProvider>
           <BrowserRouter>
             <Routes>
-              <Route path="/" element={
+              <Route path="/tools/task-smasher/" element={
                 <>
                   <Helmet>
                     <title>TaskSmasher | AI To-Do Lists & Project Planning Tool</title>
                     <meta name="description" content="TaskSmasher helps you organize tasks with AI To-Do Lists & Project Planning tools. Create, manage, and complete tasks efficiently with AI assistance." />
                     <meta name="keywords" content="AI To-Do Lists, Project Planning, Task Management, Productivity, Organization, AI Assistant" />
-                    <link rel="canonical" href="https://smashingapps.ai/" />
+                    <link rel="canonical" href="https://smashingapps.ai/tools/task-smasher/" />
                     <meta property="og:title" content="TaskSmasher | AI To-Do Lists & Project Planning Tool" />
                     <meta property="og:description" content="TaskSmasher helps you organize tasks with AI To-Do Lists & Project Planning tools. Create, manage, and complete tasks efficiently with AI assistance." />
                     <meta property="og:type" content="website" />
-                    <meta property="og:url" content="https://smashingapps.ai/" />
-                    <meta property="og:image" content="https://smashingapps.ai/assets/AITaskSmasher-small.png" />
+                    <meta property="og:url" content="https://smashingapps.ai/tools/task-smasher/" />
+                    <meta property="og:image" content="https://smashingapps.ai/tools/task-smasher/assets/AITaskSmasher-small.png" />
                     <meta name="twitter:card" content="summary" />
                     <meta name="twitter:title" content="TaskSmasher - AI-powered Task Management" />
                     <meta name="twitter:description" content="TaskSmasher is an AI-powered task management application that helps you organize and manage your tasks efficiently." />
-                    <meta name="twitter:image" content="https://smashingapps.ai/assets/AITaskSmasher-small.png" />
+                    <meta name="twitter:image" content="https://smashingapps.ai/tools/task-smasher/assets/AITaskSmasher-small.png" />
                   </Helmet>
                   <TasksProvider initialUseCase="daily">
                     <App />
@@ -71,7 +71,7 @@ createRoot(root).render(
                 </>
               } />
               {useCaseRoutes}
-              <Route path="*" element={<Navigate to="/" replace />} />
+              <Route path="*" element={<Navigate to="/tools/task-smasher/" replace />} />
             </Routes>
           </BrowserRouter>
         </TasksProvider>
