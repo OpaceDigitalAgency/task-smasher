@@ -186,7 +186,27 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
     };
   }
   
-  // Validate request method
+  // Handle GET request for rate limit status
+  if (event.httpMethod === "GET" && event.path.endsWith("/rate-limit-status")) {
+    return {
+      statusCode: 200,
+      headers: {
+        "Content-Type": "application/json",
+        "X-RateLimit-Limit": rateLimitResult.total.toString(),
+        "X-RateLimit-Remaining": rateLimitResult.remaining.toString(),
+        "X-RateLimit-Reset": new Date(rateLimitResult.resetTime).toISOString(),
+        "X-RateLimit-Used": (rateLimitResult.total - rateLimitResult.remaining).toString()
+      },
+      body: JSON.stringify({
+        limit: rateLimitResult.total,
+        remaining: rateLimitResult.remaining,
+        reset: new Date(rateLimitResult.resetTime).toISOString(),
+        used: rateLimitResult.total - rateLimitResult.remaining
+      })
+    };
+  }
+  
+  // Validate request method for other endpoints
   if (event.httpMethod !== "POST") {
     return {
       statusCode: 405,

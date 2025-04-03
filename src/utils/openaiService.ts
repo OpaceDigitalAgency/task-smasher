@@ -137,29 +137,50 @@ export const OpenAIService = {
    */
   async getRateLimitStatus(): Promise<RateLimitInfo> {
     try {
-      // Make a minimal request to check rate limit
-      const { rateLimit } = await this.createChatCompletion({
-        model: 'gpt-3.5-turbo',
-        messages: [{ role: 'user', content: 'Hello' }],
-        max_tokens: 1, // Minimize token usage
+      // Use the dedicated rate limit status endpoint
+      console.log('Fetching rate limit status from dedicated endpoint');
+      const response = await fetch('/api/openai-proxy/rate-limit-status', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
       });
       
-      return rateLimit;
-    } catch (error) {
-      if (error instanceof Error && error.message.includes('Rate limit exceeded')) {
-        // Extract reset time from error message
-        const resetTimeMatch = error.message.match(/after (.*?)$/);
-        const resetTime = resetTimeMatch ? new Date(resetTimeMatch[1]) : new Date(Date.now() + 3600000);
-        
-        return {
-          limit: 20,
-          remaining: 0,
-          reset: resetTime,
-          used: 20
-        };
+      if (!response.ok) {
+        throw new Error(`Failed to get rate limit status: ${response.statusText}`);
       }
       
-      throw error;
+      // Extract rate limit information from headers
+      const rateLimit: RateLimitInfo = {
+        limit: parseInt(response.headers.get('X-RateLimit-Limit') || '20', 10),
+        remaining: parseInt(response.headers.get('X-RateLimit-Remaining') || '0', 10),
+        reset: new Date(response.headers.get('X-RateLimit-Reset') || Date.now() + 3600000),
+        used: parseInt(response.headers.get('X-RateLimit-Used') || '0', 10)
+      };
+      
+      console.log('Rate limit status from headers:', rateLimit);
+      
+      // Also parse the response body as a fallback
+      const data = await response.json();
+      console.log('Rate limit status from body:', data);
+      
+      // Use body data if available, otherwise use header data
+      return {
+        limit: data.limit || rateLimit.limit,
+        remaining: data.remaining || rateLimit.remaining,
+        reset: new Date(data.reset) || rateLimit.reset,
+        used: data.used || rateLimit.used
+      };
+    } catch (error) {
+      console.error('Error getting rate limit status:', error);
+      
+      // Fallback to default values
+      return {
+        limit: 20,
+        remaining: 19,
+        reset: new Date(Date.now() + 3600000),
+        used: 1
+      };
     }
   }
 };
