@@ -99,12 +99,12 @@ Object.entries(useCaseDefinitions).forEach(([id, definition]) => {
       /<meta name="description" content=".*?" \/>/,
       `<meta name="description" content="Organize your ${definition.label.toLowerCase()} with TaskSmasher's AI To-Do Lists & Project Planning tools. ${definition.description.substring(0, 70)}" />`
     )
-    // Fix script paths to use absolute paths with the subdirectory prefix
+    // Fix script paths to use absolute paths
     .replace(
       /<script type="module" src="\/src\/main.tsx"><\/script>/,
-      `<script type="module" crossorigin src="/tools/task-smasher/assets/index-DLJ8pJh6.js"></script>
-      <link rel="modulepreload" crossorigin href="/tools/task-smasher/assets/lucide-react-woLeNmVQ.js">
-      <link rel="stylesheet" crossorigin href="/tools/task-smasher/assets/index-CqRqDW3n.css">`
+      `<script type="module" crossorigin src="/assets/index-DLJ8pJh6.js"></script>
+      <link rel="modulepreload" crossorigin href="/assets/lucide-react-woLeNmVQ.js">
+      <link rel="stylesheet" crossorigin href="/assets/index-CqRqDW3n.css">`
     )
     .replace(
       /<meta name="keywords" content=".*?" \/>/,
@@ -120,7 +120,7 @@ Object.entries(useCaseDefinitions).forEach(([id, definition]) => {
     )
     .replace(
       /<meta property="og:url" content=".*?" \/>/,
-      `<meta property="og:url" content="https://smashingapps.ai/tools/task-smasher/${urlPath}/" />`
+      `<meta property="og:url" content="https://smashingapps.ai/${urlPath}/" />`
     )
     .replace(
       /<meta name="twitter:title" content=".*?" \/>/,
@@ -132,7 +132,7 @@ Object.entries(useCaseDefinitions).forEach(([id, definition]) => {
     )
     .replace(
       /<meta name="twitter:url" content=".*?" \/>/,
-      `<meta name="twitter:url" content="https://smashingapps.ai/tools/task-smasher/${urlPath}/" />`
+      `<meta name="twitter:url" content="https://smashingapps.ai/${urlPath}/" />`
     );
   
   // Create assets directory
@@ -153,7 +153,7 @@ Object.entries(useCaseDefinitions).forEach(([id, definition]) => {
           <div class="bg-white/80 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200/80 p-4 mb-6">
             <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div class="flex items-center gap-4 w-full sm:w-auto">
-                <img src="/tools/task-smasher/assets/AITaskSmasher-small.png" alt="TaskSmasher Logo" class="w-8 h-8" />
+                <img src="/assets/AITaskSmasher-small.png" alt="TaskSmasher Logo" class="w-8 h-8" />
                 <h1 class="text-2xl font-bold text-gray-900">TaskSmasher ${definition.label}</h1>
                 <div class="ml-4 text-sm text-gray-500">AI-powered task management</div>
               </div>
