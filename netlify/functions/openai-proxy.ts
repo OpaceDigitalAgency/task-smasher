@@ -129,6 +129,11 @@ async function checkRateLimit(ip: string): Promise<{ allowed: boolean; remaining
     
     // Increment count
     rateLimitStore[ip].count += 1;
+    console.log(`Incrementing count for IP ${ip} from ${rateLimitStore[ip].count - 1} to ${rateLimitStore[ip].count}`);
+    
+    // Log the entire rate limit store for debugging
+    console.log('Current rate limit store:', JSON.stringify(rateLimitStore));
+    
     await saveRateLimitStore(rateLimitStore);
     console.log(`Updated rate limit for IP ${ip}: count=${rateLimitStore[ip].count}, resetTime=${new Date(rateLimitStore[ip].resetTime).toISOString()}`);
     
@@ -191,20 +196,34 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
   
   // Handle GET request for rate limit status
   if (event.httpMethod === "GET" && event.path.endsWith("/rate-limit-status")) {
+    console.log("Rate limit status request received");
+    console.log("Current rate limit store:", JSON.stringify(rateLimitStore));
+    console.log("Rate limit result for this request:", JSON.stringify(rateLimitResult));
+    
+    // For local development, make sure we're using the correct IP
+    const ipToUse = isLocalDev ? "local-dev" : clientIP;
+    console.log(`Using IP ${ipToUse} for rate limit status`);
+    
+    // Get the actual count from the store if it exists
+    const actualUsed = rateLimitStore[ipToUse]?.count || 1;
+    const actualRemaining = Math.max(0, RATE_LIMIT - actualUsed);
+    
+    console.log(`Actual used: ${actualUsed}, Actual remaining: ${actualRemaining}`);
+    
     return {
       statusCode: 200,
       headers: {
         "Content-Type": "application/json",
-        "X-RateLimit-Limit": rateLimitResult.total.toString(),
-        "X-RateLimit-Remaining": rateLimitResult.remaining.toString(),
+        "X-RateLimit-Limit": RATE_LIMIT.toString(),
+        "X-RateLimit-Remaining": actualRemaining.toString(),
         "X-RateLimit-Reset": new Date(rateLimitResult.resetTime).toISOString(),
-        "X-RateLimit-Used": (rateLimitResult.total - rateLimitResult.remaining).toString()
+        "X-RateLimit-Used": actualUsed.toString()
       },
       body: JSON.stringify({
-        limit: rateLimitResult.total,
-        remaining: rateLimitResult.remaining,
+        limit: RATE_LIMIT,
+        remaining: actualRemaining,
         reset: new Date(rateLimitResult.resetTime).toISOString(),
-        used: rateLimitResult.total - rateLimitResult.remaining
+        used: actualUsed
       })
     };
   }
