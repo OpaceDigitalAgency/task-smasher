@@ -20,7 +20,7 @@
 # First, handle specific routes for TaskSmasher
 [[redirects]]
   from = "/tools/task-smasher/*"
-  to = "/tools/task-smasher/index.html"
+  to = "/index.html"
   status = 200
 
 # Then, handle the root SPA routing
