@@ -1,6 +1,6 @@
 [build]
   command = "npm run build"
-  publish = "tools/task-smasher"
+  publish = "./tools/task-smasher"
   functions = "netlify/functions"
 
 [dev]
