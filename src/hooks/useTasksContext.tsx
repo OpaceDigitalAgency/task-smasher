@@ -1,0 +1,21 @@
+import React, { createContext, useContext, ReactNode } from 'react';
+import { useTasks } from './useTasks';
+
+// Create context for tasks
+const TasksContext = createContext<ReturnType<typeof useTasks> | undefined>(undefined);
+
+// Provider component
+export const TasksProvider = ({ children }: { children: ReactNode }) => {
+  const tasksData = useTasks();
+  
+  return <TasksContext.Provider value={tasksData}>{children}</TasksContext.Provider>;
+};
+
+// Hook to use the tasks context
+export const useTasksContext = () => {
+  const context = useContext(TasksContext);
+  if (context === undefined) {
+    throw new Error('useTasksContext must be used within a TasksProvider');
+  }
+  return context;
+};
