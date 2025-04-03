@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "dev:netlify": "netlify dev",
-    "build": "vite build && node scripts/generate-static-pages.js && cp -r dist/* tools/task-smasher/",
+    "build": "vite build && node scripts/generate-static-pages.js",
     "lint": "eslint .",
     "preview": "vite preview",
     "backup": "node scripts/backup.js",
