@@ -134,8 +134,8 @@ function Task({
               >
                 {task.title}
                 
-                {/* Enhanced tooltip for better UX */}
-                <div className="absolute left-0 top-full mt-1 z-50 bg-gray-800 text-white text-sm rounded p-2 shadow-lg max-w-xs whitespace-normal break-words opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                {/* Fast-appearing custom tooltip */}
+                <div className="absolute left-0 top-full mt-1 z-50 bg-gray-800 text-white text-sm rounded p-2 shadow-lg max-w-xs whitespace-normal break-words opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-100 pointer-events-none">
                   {task.title}
                 </div>
               </h3>

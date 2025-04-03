@@ -99,7 +99,7 @@ Response format (JSON):
         messages: [
           {
             role: 'system',
-            content: 'You are a task categorization assistant. Analyze if tasks fit their assigned categories.'
+            content: 'You are a task categorization assistant with deep knowledge of various domains. Analyze if tasks fit their assigned categories using semantic understanding rather than keyword matching. Consider related concepts, industry practices, and common workflows when determining if a task belongs in a category. For example, "web design" is related to "marketing" because websites are often marketing tools, and "meal planning" is related to "recipe steps" because both involve food preparation.'
           },
           {
             role: 'user',

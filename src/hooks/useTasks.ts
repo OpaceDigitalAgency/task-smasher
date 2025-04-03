@@ -662,7 +662,19 @@ export function useTasks() {
         userPrompt = `Break down this recipe into ${breakdownLevel} cooking steps: "${task.title}". First, list all ingredients with exact measurements (e.g., 2 eggs, 1 cup flour, 2 tbsp butter), then include detailed preparation and cooking instructions.${task.context ? `\nContext: ${task.context}` : ''}`;
       } else if (selectedUseCase === 'marketing') {
         systemPrompt = `You are a marketing strategist. Break down marketing tasks into actionable project steps with clear deliverables. Return ONLY a JSON array in the format [{"title": "Step with deliverable", "estimatedTime": time_in_hours, "priority": "low|medium|high"}].`;
-        userPrompt = `Break down this marketing task into ${breakdownLevel} actionable project steps: "${task.title}". Include specific deliverables for each step.${task.context ? `\nContext: ${task.context}` : ''}`;
+        userPrompt = `Break down this marketing task into ${breakdownLevel} actionable project steps: "${task.title}". Include specific deliverables, timeline, and success metrics for each step.${task.context ? `\nContext: ${task.context}` : ''}`;
+      } else if (selectedUseCase === 'goals') {
+        systemPrompt = `You are a goal-setting and personal development expert. Break down goals into actionable steps with measurable outcomes. Return ONLY a JSON array in the format [{"title": "Step description", "estimatedTime": time_in_days, "priority": "low|medium|high"}].`;
+        userPrompt = `Break down this goal into ${breakdownLevel} actionable steps: "${task.title}". Include specific milestones, tracking methods, and success criteria for each step.${task.context ? `\nContext: ${task.context}` : ''}`;
+      } else if (selectedUseCase === 'home') {
+        systemPrompt = `You are a home organization and maintenance expert. Break down home tasks into detailed steps with required materials. Return ONLY a JSON array in the format [{"title": "Step description", "estimatedTime": time_in_minutes, "priority": "low|medium|high"}].`;
+        userPrompt = `Break down this home task into ${breakdownLevel} detailed steps: "${task.title}". Include required materials, tools, and specific instructions for each step.${task.context ? `\nContext: ${task.context}` : ''}`;
+      } else if (selectedUseCase === 'travel') {
+        systemPrompt = `You are a travel planning expert. Break down travel plans into detailed preparation and itinerary steps. Return ONLY a JSON array in the format [{"title": "Step description", "estimatedTime": time_in_hours_or_days, "priority": "low|medium|high"}].`;
+        userPrompt = `Break down this travel plan into ${breakdownLevel} detailed steps: "${task.title}". Include preparation tasks, booking details, and daily itinerary items.${task.context ? `\nContext: ${task.context}` : ''}`;
+      } else if (selectedUseCase === 'study') {
+        systemPrompt = `You are an educational expert. Break down study plans into focused learning sessions with specific objectives. Return ONLY a JSON array in the format [{"title": "Study session description", "estimatedTime": time_in_hours, "priority": "low|medium|high"}].`;
+        userPrompt = `Break down this study plan into ${breakdownLevel} focused learning sessions: "${task.title}". Include specific learning objectives, resources to use, and study techniques for each session.${task.context ? `\nContext: ${task.context}` : ''}`;
       }
       
       // Use OpenAIService to make the request through the proxy
@@ -786,7 +798,19 @@ export function useTasks() {
         userPrompt = 'Generate 5 recipe ideas with specific ingredients (including exact measurements) and cooking steps. Format each recipe with a clear title, detailed ingredients list with measurements, and numbered steps.';
       } else if (selectedUseCase === 'marketing') {
         systemPrompt = 'You are a marketing strategist that creates actionable marketing project plans. Each plan should have clear objectives and implementation steps.';
-        userPrompt = 'Generate 5 marketing campaign ideas with specific objectives and implementation steps. Format each as a mini project plan.';
+        userPrompt = 'Generate 5 marketing campaign ideas with specific objectives and implementation steps. Format each as a mini project plan with timeline, deliverables, and success metrics.';
+      } else if (selectedUseCase === 'goals') {
+        systemPrompt = 'You are a goal-setting and personal development expert. Create structured goal plans with measurable targets and action steps.';
+        userPrompt = 'Generate 5 goal-setting ideas with SMART criteria (Specific, Measurable, Achievable, Relevant, Time-bound). Include milestones and tracking methods for each goal.';
+      } else if (selectedUseCase === 'home') {
+        systemPrompt = 'You are a home organization and maintenance expert. Create detailed home chore and maintenance plans.';
+        userPrompt = 'Generate 5 home maintenance or organization tasks with specific steps, required materials, and estimated time to complete each task.';
+      } else if (selectedUseCase === 'travel') {
+        systemPrompt = 'You are a travel planning expert. Create detailed travel itineraries and planning checklists.';
+        userPrompt = 'Generate 5 travel planning tasks with specific destinations, activities, accommodation options, and preparation steps for each trip idea.';
+      } else if (selectedUseCase === 'study') {
+        systemPrompt = 'You are an educational expert. Create detailed study plans and learning strategies.';
+        userPrompt = 'Generate 5 study plan ideas with specific subjects, learning objectives, study techniques, and resource recommendations for each plan.';
       }
       
       const { data, rateLimit } = await OpenAIService.createChatCompletion({
