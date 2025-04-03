@@ -17,13 +17,6 @@
   status = 200
 
 # Handle client-side routing for SPAs
-# First, handle specific routes for TaskSmasher
-[[redirects]]
-  from = "/tools/task-smasher/*"
-  to = "/index.html"
-  status = 200
-
-# Then, handle the root SPA routing
 [[redirects]]
   from = "/*"
   to = "/index.html"
