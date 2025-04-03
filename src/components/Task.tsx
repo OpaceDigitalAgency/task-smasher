@@ -12,6 +12,7 @@ function Task({
   onToggleComplete,
   onShowFeedback,
   onDeleteTask,
+  onDelete,
   onGenerateSubtasks,
   onAddSubtask,
   onRegenerateTask,
@@ -27,6 +28,8 @@ function Task({
   handleEditSave,
   updateTaskPriority
 }: TaskProps) {
+  // Use onDelete if provided, otherwise fall back to onDeleteTask
+  const handleDelete = onDelete || onDeleteTask;
   const {
     attributes,
     listeners,
@@ -231,7 +234,7 @@ function Task({
               )}
               
               <button
-                onClick={() => onDeleteTask(task.id, boardId)}
+                onClick={() => handleDelete && handleDelete(task.id, boardId)}
                 className="text-red-400 hover:text-red-600 transition-colors rounded p-1 hover:bg-red-50"
                 title="Delete task"
               >
@@ -258,7 +261,7 @@ function Task({
                   editing={editing}
                   startEditing={startEditing}
                   handleEditSave={handleEditSave}
-                  onDeleteTask={onDeleteTask}
+                  onDeleteTask={handleDelete}
                   updateTaskPriority={updateTaskPriority}
                 />
               ))}

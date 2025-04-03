@@ -1,8 +1,9 @@
 import React, { createContext, useContext, ReactNode } from 'react';
 import { useTasks } from './useTasks';
+import { TasksContextType } from '../types';
 
 // Create context for tasks
-const TasksContext = createContext<ReturnType<typeof useTasks> | undefined>(undefined);
+const TasksContext = createContext<TasksContextType | undefined>(undefined);
 
 // Provider component
 export const TasksProvider = ({ children }: { children: ReactNode }) => {

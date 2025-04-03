@@ -15,6 +15,7 @@ function Board({
   onToggleComplete,
   onShowFeedback,
   onDeleteTask,
+  onDelete,
   onGenerateSubtasks,
   onAddSubtask,
   onRegenerateTask,
@@ -31,6 +32,8 @@ function Board({
   updateTaskPriority,
   isDraggingOver
 }: BoardComponentProps) {
+  // Use onDelete if provided, otherwise fall back to onDeleteTask
+  const handleDelete = onDelete || onDeleteTask;
   return (
     <div className={`flex-1 ${isDraggingOver === board.id ? 'scale-[1.02] transition-transform duration-200' : ''}`}>
       <div className="flex items-center justify-between mb-3">
@@ -75,7 +78,7 @@ function Board({
               onToggleExpanded={onToggleExpanded}
               onToggleComplete={onToggleComplete}
               onShowFeedback={onShowFeedback}
-              onDeleteTask={onDeleteTask}
+              onDelete={handleDelete}
               onGenerateSubtasks={onGenerateSubtasks}
               onAddSubtask={onAddSubtask}
               onRegenerateTask={onRegenerateTask}

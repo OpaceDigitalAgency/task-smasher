@@ -1,12 +1,12 @@
 # OpenAI Proxy Netlify Function
 
-This Netlify function securely proxies requests to the OpenAI API with rate limiting (5 requests per IP per hour).
+This Netlify function securely proxies requests to the OpenAI API with rate limiting (5 requests per IP per day).
 
 ## Features
 
 - Securely proxies requests to OpenAI API
 - Keeps your API key secure on the server side
-- Implements rate limiting (5 requests per IP address per hour)
+- Implements rate limiting (5 requests per IP address per day)
 - Returns rate limit information in response headers
 - Handles errors gracefully
 
@@ -86,14 +86,14 @@ const rateLimitInfo = await OpenAIService.getRateLimitStatus();
 
 The function returns the following headers with rate limit information:
 
-- `X-RateLimit-Limit`: Maximum number of requests allowed per hour (5)
+- `X-RateLimit-Limit`: Maximum number of requests allowed per day (5)
 - `X-RateLimit-Remaining`: Number of requests remaining in the current window
 - `X-RateLimit-Reset`: ISO timestamp when the rate limit will reset
 
 ## Important Notes
 
-- The in-memory rate limiting implementation will reset when the function is redeployed or goes cold
-- For production use with high traffic, consider implementing a more persistent solution using Redis or DynamoDB
+- The rate limiting implementation uses a persistent file-based approach that should maintain state between function invocations
+- For production use with high traffic, consider implementing an even more robust solution using Redis or DynamoDB
 - The function is configured to handle chat completions by default, but can be modified to handle other OpenAI endpoints
 
 ## Customizing Rate Limits
@@ -102,4 +102,4 @@ To change the rate limit, modify the following constants in `openai-proxy.ts`:
 
 ```typescript
 const RATE_LIMIT = 5; // Number of requests per window
-const RATE_LIMIT_WINDOW = 60 * 60 * 1000; // Window size in milliseconds (1 hour)
+const RATE_LIMIT_WINDOW = 24 * 60 * 60 * 1000; // Window size in milliseconds (24 hours)

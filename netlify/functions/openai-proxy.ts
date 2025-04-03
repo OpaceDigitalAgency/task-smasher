@@ -149,12 +149,20 @@ function checkRateLimit(ip: string): { allowed: boolean; remaining: number; rese
 
 const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
   // Get client IP
-  const clientIP = event.headers["client-ip"] || 
-                  event.headers["x-forwarded-for"] || 
+  const clientIP = event.headers["client-ip"] ||
+                  event.headers["x-forwarded-for"] ||
                   "unknown-ip";
   
+  // Bypass rate limit for local development
+  const isLocalDev = clientIP === "::1" || clientIP === "127.0.0.1" || clientIP.startsWith("192.168.");
+  if (isLocalDev) {
+    console.log("Local development detected, bypassing rate limit");
+  }
+  
   // Check rate limit
-  const rateLimitResult = checkRateLimit(clientIP);
+  const rateLimitResult = isLocalDev ?
+    { allowed: true, remaining: RATE_LIMIT - 1, resetTime: Date.now() + RATE_LIMIT_WINDOW, total: RATE_LIMIT } :
+    checkRateLimit(clientIP);
   
   if (!rateLimitResult.allowed) {
     const resetDate = new Date(rateLimitResult.resetTime).toISOString();
