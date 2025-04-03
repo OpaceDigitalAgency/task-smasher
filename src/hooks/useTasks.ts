@@ -175,6 +175,18 @@ export function useTasks(): TasksContextType {
     syncRateLimitWithServer();
   }, []);
   
+  // Function to synchronize rate limit info after each API call
+  const syncRateLimitInfo = useCallback((rateLimit: RateLimitInfo) => {
+    // Update the rateLimitInfo state
+    setRateLimitInfo(rateLimit);
+    
+    // Update the executionCount to match the server's used count
+    setExecutionCount(rateLimit.used);
+    
+    // Update the rateLimited state based on the server response
+    setRateLimited(rateLimit.remaining === 0);
+  }, []);
+  
   
   // Save totalCost to localStorage when it changes
   useEffect(() => {
@@ -187,6 +199,11 @@ export function useTasks(): TasksContextType {
     try {
       // Use the updated validateTaskWithAI function that uses the proxy
       const result = await validateTaskWithAI(taskText, selectedUseCase);
+      
+      // The validateTaskWithAI function doesn't return the rate limit info directly,
+      // so we need to sync with the server to get the latest rate limit info
+      const serverRateLimit = await OpenAIService.getRateLimitStatus();
+      syncRateLimitInfo(serverRateLimit);
       
       if (!result.isValid && result.confidence > 0.6) {
         setTaskMismatch({
@@ -678,10 +695,8 @@ export function useTasks(): TasksContextType {
         ]
       });
       
-      // Update rate limit status
-      if (rateLimit.remaining === 0) {
-        setRateLimited(true);
-      }
+      // Update rate limit information
+      syncRateLimitInfo(rateLimit);
       
       if (data.choices && data.choices[0]) {
         const improvedTask = data.choices[0].message.content.trim();
@@ -709,8 +724,7 @@ export function useTasks(): TasksContextType {
         // Update cost
         setTotalCost(prev => prev + (data.usage?.total_tokens || 0) * 0.000002);
         
-        // Update execution count to match server's rate limit info
-        setExecutionCount(rateLimit.used);
+        // No need to update executionCount here as it's already updated in syncRateLimitInfo
       }
     } catch (error) {
       console.error('Error regenerating task:', error);
@@ -831,10 +845,8 @@ Make sure to include all necessary ingredients with precise measurements before 
         ]
       });
       
-      // Update rate limit status
-      if (rateLimit.remaining === 0) {
-        setRateLimited(true);
-      }
+      // Update rate limit information
+      syncRateLimitInfo(rateLimit);
       
       if (data.choices && data.choices[0]) {
         let subtasksContent = data.choices[0].message.content.trim();
@@ -882,8 +894,7 @@ Make sure to include all necessary ingredients with precise measurements before 
             // Update cost
             setTotalCost(prev => prev + (data.usage?.total_tokens || 0) * 0.000002);
             
-            // Update execution count to match server's rate limit info
-            setExecutionCount(rateLimit.used);
+            // No need to update executionCount here as it's already updated in syncRateLimitInfo
           }
         } catch (error) {
           console.error('Error parsing subtasks:', error);
@@ -979,13 +990,7 @@ Make sure to include all necessary ingredients with precise measurements before 
       console.log("Received response from OpenAI:", data);
       
       // Update rate limit information
-      setRateLimitInfo(rateLimit);
-      
-      // Update rate limit status
-      if (rateLimit.remaining === 0) {
-        setRateLimited(true);
-        console.log("Rate limit reached");
-      }
+      syncRateLimitInfo(rateLimit);
       
       if (!data.choices || !data.choices[0]) {
         console.error("No choices in OpenAI response");
@@ -1043,8 +1048,7 @@ Make sure to include all necessary ingredients with precise measurements before 
         // Update cost
         setTotalCost(prev => prev + (data.usage?.total_tokens || 0) * 0.000002);
         
-        // Update execution count to match server's rate limit info
-        setExecutionCount(rateLimit.used);
+        // No need to update executionCount here as it's already updated in syncRateLimitInfo
       
     } catch (error) {
       console.error('Error generating ideas:', error);

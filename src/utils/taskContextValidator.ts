@@ -94,7 +94,7 @@ Response format (JSON):
 
     try {
       // Use our OpenAIService to make the request through the proxy
-      const { data } = await OpenAIService.createChatCompletion({
+      const { data, rateLimit } = await OpenAIService.createChatCompletion({
         model: 'gpt-3.5-turbo',
         messages: [
           {
