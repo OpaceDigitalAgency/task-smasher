@@ -154,8 +154,11 @@ export function useTasks(): TasksContextType {
   useEffect(() => {
     const syncRateLimitWithServer = async () => {
       try {
+        console.log('Synchronizing with server rate limit on page load');
+        
         // Get the current rate limit status from the server
         const serverRateLimit = await OpenAIService.getRateLimitStatus();
+        console.log('Received server rate limit:', serverRateLimit);
         
         // Update the client-side state with the server-side information
         setRateLimitInfo(serverRateLimit);
@@ -163,9 +166,11 @@ export function useTasks(): TasksContextType {
         // Also update the executionCount to match the server's used count
         // This ensures the "API Calls" counter matches the "API Usage" display
         setExecutionCount(serverRateLimit.used);
+        console.log('Updated executionCount to:', serverRateLimit.used);
         
         // Update the rateLimited state based on the server response
         setRateLimited(serverRateLimit.remaining === 0);
+        console.log('Updated rateLimited to:', serverRateLimit.remaining === 0);
       } catch (error) {
         console.error('Error synchronizing with server rate limit:', error);
       }
@@ -177,14 +182,18 @@ export function useTasks(): TasksContextType {
   
   // Function to synchronize rate limit info after each API call
   const syncRateLimitInfo = useCallback((rateLimit: RateLimitInfo) => {
+    console.log('Synchronizing rate limit info after API call:', rateLimit);
+    
     // Update the rateLimitInfo state
     setRateLimitInfo(rateLimit);
     
     // Update the executionCount to match the server's used count
     setExecutionCount(rateLimit.used);
+    console.log('Updated executionCount to:', rateLimit.used);
     
     // Update the rateLimited state based on the server response
     setRateLimited(rateLimit.remaining === 0);
+    console.log('Updated rateLimited to:', rateLimit.remaining === 0);
   }, []);
   
   
