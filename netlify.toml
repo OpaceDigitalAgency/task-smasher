@@ -16,15 +16,17 @@
   to = "/.netlify/functions/:splat"
   status = 200
 
-# Handle client-side routing for SPA
-[[redirects]]
-  from = "/*"
-  to = "/tools/task-smasher/index.html"
-  status = 200
-
+# Handle client-side routing for SPAs
+# First, handle specific routes for TaskSmasher
 [[redirects]]
   from = "/tools/task-smasher/*"
   to = "/tools/task-smasher/index.html"
+  status = 200
+
+# Then, handle the root SPA routing
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
   status = 200
 
 # Enable Netlify Blob store for persistent rate limiting
@@ -32,7 +34,7 @@
   serve_folder = "public"
 
 # Redirects for SEO-friendly URLs
-# Redirect root to /tools/task-smasher/
+# Redirect root to /tools/task-smasher/ until a proper homepage is created
 [[redirects]]
   from = "/"
   to = "/tools/task-smasher/"

@@ -263,7 +263,7 @@ function App({ initialUseCase }: AppProps) {
         <header className="mb-8">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
             <div className="flex items-center gap-4 w-full sm:w-auto">
-              <img src="/assets/AITaskSmasher-small.png" alt="TaskSmasher Logo" className="w-8 h-8" />
+              <img src="/tools/task-smasher/assets/AITaskSmasher-small.png" alt="TaskSmasher Logo" className="w-8 h-8" />
               <h1 className="text-2xl font-bold text-gray-900">
                 TaskSmasher {selectedUseCase && useCaseDefinitions[selectedUseCase]?.label}
               </h1>
