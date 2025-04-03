@@ -227,6 +227,19 @@ export function useTasks(): TasksContextType {
     // Update the rateLimited state based on the server response
     setRateLimited(rateLimit.remaining === 0);
     console.log('Updated rateLimited to:', rateLimit.remaining === 0);
+    
+    // Store the updated rate limit info in localStorage directly
+    // This is in addition to the useEffect that watches rateLimitInfo
+    localStorage.setItem('rateLimitInfo', JSON.stringify({
+      limit: rateLimit.limit,
+      remaining: rateLimit.remaining,
+      reset: rateLimit.reset.toISOString(),
+      used: rateLimit.used
+    }));
+    
+    // Also update the apiCallCount in localStorage
+    localStorage.setItem('apiCallCount', rateLimit.used.toString());
+    console.log('Saved rate limit info and API call count to localStorage');
   }, []);
   
   
