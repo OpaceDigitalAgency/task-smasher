@@ -11,28 +11,29 @@
   autoLaunch = true
   framework = "vite"
 
-[[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/:splat"
-  status = 200
-
-# Handle client-side routing for SPAs
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-
 # Enable Netlify Blob store for persistent rate limiting
 [blobs]
   serve_folder = "public"
 
-# Redirects for SEO-friendly URLs
 # Redirect root to /tools/task-smasher/ until a proper homepage is created
 [[redirects]]
   from = "/"
   to = "/tools/task-smasher/"
   status = 301
 
+# SPA fallback for TaskSmasher app
+[[redirects]]
+  from = "/tools/task-smasher/*"
+  to = "/tools/task-smasher/index.html"
+  status = 200
+
+# API redirects for serverless functions
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
+# SEO-Friendly URL Overrides
 [[redirects]]
   from = "/tools/task-smasher/daily-organizer/*"
   to = "/tools/task-smasher/daily-organizer/index.html"
@@ -91,4 +92,10 @@
 [[redirects]]
   from = "/tools/task-smasher/creative-projects/*"
   to = "/tools/task-smasher/creative-projects/index.html"
+  status = 200
+
+# Catch-all redirect for SPA - must be at the very bottom
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
   status = 200
