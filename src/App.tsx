@@ -368,11 +368,21 @@ function App() {
             </button>
             
             {/* Subtask Breakdown Slider Button - Completely Separate */}
-            <button 
+            <button
               className="flex items-center gap-2 px-3 py-2 bg-white/80 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-medium shadow-sm transition-all duration-200"
               onClick={() => setSliderExpanded(!sliderExpanded)}
             >
               <Sliders className="w-4 h-4" />
+            </button>
+            
+            {/* Undo button next to filters */}
+            <button
+              onClick={handleUndo}
+              className="flex items-center gap-2 px-3 py-2 bg-white/80 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-medium shadow-sm transition-all duration-200"
+              title="Undo last action"
+            >
+              <Undo className="w-4 h-4" />
+              <span>Undo</span>
               <span>Subtask Level: {breakdownLevel}</span>
               {sliderExpanded ? 
                 <ChevronUp className="w-4 h-4 ml-1" /> : 
