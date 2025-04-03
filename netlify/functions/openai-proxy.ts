@@ -22,37 +22,45 @@ interface RateLimitStore {
 // Store name for rate limits
 const RATE_LIMIT_STORE_NAME = "rate-limits";
 
-// Function to get the KV store
-function getRateLimitStore() {
+// Function to get the Blob store
+function getBlobStore() {
   return getStore(RATE_LIMIT_STORE_NAME);
 }
 
-// Function to load the rate limit store from KV store
+// Function to load the rate limit store from Blob store
 async function loadRateLimitStore(): Promise<RateLimitStore> {
   try {
-    const store = getRateLimitStore();
-    const data = await store.get("rate-limits");
+    const blobStore = getBlobStore();
+    const blob = await blobStore.get("rate-limits");
     
-    if (data) {
+    if (blob) {
       try {
-        return JSON.parse(data as string);
+        // Parse the blob data
+        const data = blob.toString();
+        console.log('Loaded rate limit data:', data);
+        return JSON.parse(data);
       } catch (parseError) {
         console.error('Error parsing rate limit store:', parseError);
       }
+    } else {
+      console.log('No rate limit data found in Blob store');
     }
   } catch (error) {
-    console.error('Error loading rate limit store from KV:', error);
+    console.error('Error loading rate limit store from Blob store:', error);
   }
   return {};
 }
 
-// Function to save the rate limit store to KV store
-async function saveRateLimitStore(store: RateLimitStore): Promise<void> {
+// Function to save the rate limit store to Blob store
+async function saveRateLimitStore(rateLimitData: RateLimitStore): Promise<void> {
   try {
-    const kvStore = getRateLimitStore();
-    await kvStore.set("rate-limits", JSON.stringify(store));
+    const blobStore = getBlobStore();
+    const dataString = JSON.stringify(rateLimitData);
+    console.log('Saving rate limit data:', dataString);
+    await blobStore.set("rate-limits", dataString);
+    console.log('Rate limit data saved successfully');
   } catch (error) {
-    console.error('Error saving rate limit store to KV:', error);
+    console.error('Error saving rate limit store to Blob store:', error);
   }
 }
 
