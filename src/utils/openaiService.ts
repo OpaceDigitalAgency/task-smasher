@@ -65,7 +65,7 @@ export const OpenAIService = {
    * @returns The chat completion response and rate limit info
    * @throws Error if the request fails
    */
-  async createChatCompletion(request: ChatCompletionRequest): Promise<{
+  async createChatCompletion(request: ChatCompletionRequest, recaptchaToken?: string | null): Promise<{
     data: ChatCompletionResponse;
     rateLimit: RateLimitInfo;
   }> {
@@ -73,14 +73,34 @@ export const OpenAIService = {
       // Get the current API call count from localStorage
       const apiCallCount = parseInt(localStorage.getItem('apiCallCount') || '0', 10);
       
+      // Prepare headers
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'X-API-Call-Count': apiCallCount.toString() // Send the current count to the server
+      };
+      
+      // Add reCAPTCHA token if available
+      if (recaptchaToken) {
+        headers['X-ReCaptcha-Token'] = recaptchaToken;
+        console.log('Adding reCAPTCHA token to headers:', recaptchaToken.substring(0, 10) + '...');
+      } else {
+        console.warn('No reCAPTCHA token available for this request');
+      }
+      
+      console.log('Request headers:', headers);
+      
       // Use the Netlify function proxy instead of direct OpenAI API
       const response = await fetch('/api/openai-proxy', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-API-Call-Count': apiCallCount.toString() // Send the current count to the server
-        },
+        headers,
         body: JSON.stringify(request),
+      });
+      
+      // Log the response headers for debugging
+      console.log('Response headers:', {
+        'X-ReCaptcha-Verified': response.headers.get('X-ReCaptcha-Verified'),
+        'X-RateLimit-Used': response.headers.get('X-RateLimit-Used'),
+        'X-RateLimit-Remaining': response.headers.get('X-RateLimit-Remaining')
       });
 
       // Extract rate limit information from headers

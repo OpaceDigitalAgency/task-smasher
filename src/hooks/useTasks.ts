@@ -3,6 +3,7 @@ import { Board, EditingState, FeedbackState, Task, TaskMismatchData, TasksContex
 import { filterTasksByPriority, filterTasksByRating } from '../utils/taskUtils';
 import { validateTaskLocally, validateTaskWithAI } from '../utils/taskContextValidator';
 import OpenAIService from '../utils/openaiService';
+import useReCaptcha from './useReCaptcha';
 
 export function useTasks(): TasksContextType {
   // Removed openAIKey state as we're now using the proxy
@@ -248,12 +249,18 @@ export function useTasks(): TasksContextType {
     localStorage.setItem('totalCost', totalCost.toString());
   }, [totalCost]);
 
+  // Get the reCAPTCHA token generator
+  const { getReCaptchaToken } = useReCaptcha();
+  
   const checkTaskContext = useCallback(async (taskText: string) => {
     if (!selectedUseCase || !taskText.trim()) return true;
     
     try {
+      // Get reCAPTCHA token
+      const recaptchaToken = await getReCaptchaToken('validate_task');
+      
       // Use the updated validateTaskWithAI function that uses the proxy
-      const result = await validateTaskWithAI(taskText, selectedUseCase);
+      const result = await validateTaskWithAI(taskText, selectedUseCase, recaptchaToken);
       
       // The validateTaskWithAI function doesn't return the rate limit info directly,
       // so we need to sync with the server to get the latest rate limit info
@@ -282,7 +289,7 @@ export function useTasks(): TasksContextType {
       console.error('Error validating task context:', error);
       return true;
     }
-  }, [selectedUseCase]);
+  }, [selectedUseCase, getReCaptchaToken, syncRateLimitInfo]);
 
   const handleAddTask = useCallback(async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -1000,6 +1007,10 @@ Make sure to include all necessary ingredients with precise measurements before 
     try {
       console.log("Generating ideas for use case:", selectedUseCase);
       
+      // Get reCAPTCHA token
+      const recaptchaToken = await getReCaptchaToken('generate_ideas');
+      console.log("Got reCAPTCHA token for generate_ideas:", recaptchaToken ? "Yes" : "No");
+      
       // Use OpenAIService to make the request through the proxy
       // Create a prompt based on the selected use case
       let systemPrompt = 'You are a helpful assistant that generates creative task ideas. Return a list of 5 task ideas, one per line, no numbers or bullets.';
@@ -1040,7 +1051,7 @@ Make sure to include all necessary ingredients with precise measurements before 
             content: userPrompt
           }
         ]
-      });
+      }, recaptchaToken);
       
       console.log("Received response from OpenAI:", data);
       
@@ -1089,7 +1100,7 @@ Make sure to include all necessary ingredients with precise measurements before 
                       title: idea,
                       subtasks: [],
                       completed: false,
-                      priority: 'medium',
+                      priority: 'medium' as 'low' | 'medium' | 'high',
                       estimatedTime: 1,
                       expanded: false,
                       boardId: 'todo'
@@ -1128,7 +1139,7 @@ Make sure to include all necessary ingredients with precise measurements before 
     let filteredTasks = filterTasksByPriority(board.tasks, filterPriority);
     
     if (filterRating > 0) {
-      filteredTasks = filterTasksByRating(filteredTasks, filterRating);
+      filteredTasks = filterTasksByRating(filteredTasks, filterRating as 1 | 2 | 3 | 4 | 5);
     }
     
     return filteredTasks;

@@ -73,7 +73,8 @@ export const validateTaskLocally = (task: string, useCase: string): ValidationRe
  */
 export const validateTaskWithAI = async (
   task: string,
-  useCase: string
+  useCase: string,
+  recaptchaToken?: string | null
 ): Promise<ValidationResult> => {
   try {
     const prompt = `
@@ -106,7 +107,7 @@ Response format (JSON):
             content: prompt
           }
         ]
-      });
+      }, recaptchaToken);
       
       if (data.choices && data.choices[0]) {
         try {
