@@ -100,6 +100,20 @@ export const OpenAIService = {
       }
 
       const data = await response.json() as ChatCompletionResponse;
+      
+      // Store the rate limit info in localStorage for debugging
+      localStorage.setItem('lastApiCallRateLimitInfo', JSON.stringify({
+        ...rateLimit,
+        reset: rateLimit.reset.toISOString(),
+        timestamp: new Date().toISOString(),
+        endpoint: 'createChatCompletion'
+      }));
+      
+      // Also update a counter in localStorage
+      const apiCallCount = parseInt(localStorage.getItem('apiCallCount') || '0', 10) + 1;
+      localStorage.setItem('apiCallCount', apiCallCount.toString());
+      console.log(`API call count (from localStorage): ${apiCallCount}`);
+      
       return { data, rateLimit };
     } catch (error) {
       if (error instanceof Error) {
@@ -139,16 +153,28 @@ export const OpenAIService = {
     try {
       // Use the dedicated rate limit status endpoint
       console.log('Fetching rate limit status from dedicated endpoint');
-      const response = await fetch('/api/openai-proxy/rate-limit-status', {
+      
+      // Add a cache-busting parameter to prevent caching
+      const cacheBuster = Date.now();
+      const response = await fetch(`/api/openai-proxy/rate-limit-status?_=${cacheBuster}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
         }
       });
       
       if (!response.ok) {
         throw new Error(`Failed to get rate limit status: ${response.statusText}`);
       }
+      
+      // Log all headers for debugging
+      console.log('Response headers:');
+      response.headers.forEach((value, key) => {
+        console.log(`${key}: ${value}`);
+      });
       
       // Extract rate limit information from headers
       const rateLimit: RateLimitInfo = {
@@ -165,12 +191,23 @@ export const OpenAIService = {
       console.log('Rate limit status from body:', data);
       
       // Use body data if available, otherwise use header data
-      return {
+      const result = {
         limit: data.limit || rateLimit.limit,
         remaining: data.remaining || rateLimit.remaining,
         reset: new Date(data.reset) || rateLimit.reset,
         used: data.used || rateLimit.used
       };
+      
+      console.log('Final rate limit status:', result);
+      
+      // Store the rate limit info in localStorage for debugging
+      localStorage.setItem('lastRateLimitInfo', JSON.stringify({
+        ...result,
+        reset: result.reset.toISOString(),
+        timestamp: new Date().toISOString()
+      }));
+      
+      return result;
     } catch (error) {
       console.error('Error getting rate limit status:', error);
       
