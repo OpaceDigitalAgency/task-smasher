@@ -6,7 +6,7 @@ import { validateTaskLocally, validateTaskWithAI } from '../utils/taskContextVal
 const API_URL = 'https://api.openai.com/v1/chat/completions';
 
 export function useTasks() {
-  const [openAIKey, setOpenAIKey] = useState('');
+  const [openAIKey, setOpenAIKey] = useState(import.meta.env.VITE_OPENAI_API_KEY || '');
   const [selectedModel, setSelectedModel] = useState('gpt-3.5-turbo');
   const [totalCost, setTotalCost] = useState(0);
   const [executionCount, setExecutionCount] = useState(0);
@@ -173,7 +173,7 @@ export function useTasks() {
       value: currentValue
     });
   }, []);
-  
+  console.log("🔁 This is a test update.");
   const handleEditSave = useCallback((boardId: string) => {
     const { taskId, subtaskId, field, value } = editing;
     
