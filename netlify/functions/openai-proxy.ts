@@ -81,59 +81,74 @@ let rateLimitStore: RateLimitStore = {};
 async function checkRateLimit(ip: string): Promise<{ allowed: boolean; remaining: number; resetTime: number; total: number }> {
   const now = Date.now();
   
-  // Reload the store to get the latest data
-  rateLimitStore = await loadRateLimitStore();
-  
-  // Clean up expired entries
-  let cleanupPerformed = false;
-  Object.keys(rateLimitStore).forEach(key => {
-    if (rateLimitStore[key].resetTime < now) {
-      delete rateLimitStore[key];
-      cleanupPerformed = true;
+  try {
+    // Reload the store to get the latest data
+    rateLimitStore = await loadRateLimitStore();
+    
+    // Clean up expired entries
+    let cleanupPerformed = false;
+    Object.keys(rateLimitStore).forEach(key => {
+      if (rateLimitStore[key].resetTime < now) {
+        delete rateLimitStore[key];
+        cleanupPerformed = true;
+      }
+    });
+    
+    // Save the store if we cleaned up any entries
+    if (cleanupPerformed) {
+      await saveRateLimitStore(rateLimitStore);
     }
-  });
-  
-  // Save the store if we cleaned up any entries
-  if (cleanupPerformed) {
+    
+    // Check if IP exists in store
+    if (!rateLimitStore[ip] || rateLimitStore[ip].resetTime < now) {
+      // Create new entry or reset expired entry
+      rateLimitStore[ip] = {
+        count: 1,
+        resetTime: now + RATE_LIMIT_WINDOW
+      };
+      await saveRateLimitStore(rateLimitStore);
+      console.log(`Created new rate limit entry for IP ${ip}: count=1, resetTime=${new Date(rateLimitStore[ip].resetTime).toISOString()}`);
+      return {
+        allowed: true,
+        remaining: RATE_LIMIT - 1,
+        resetTime: rateLimitStore[ip].resetTime,
+        total: RATE_LIMIT
+      };
+    }
+    
+    // Check if rate limit exceeded
+    if (rateLimitStore[ip].count >= RATE_LIMIT) {
+      console.log(`Rate limit exceeded for IP ${ip}: count=${rateLimitStore[ip].count}, resetTime=${new Date(rateLimitStore[ip].resetTime).toISOString()}`);
+      return {
+        allowed: false,
+        remaining: 0,
+        resetTime: rateLimitStore[ip].resetTime,
+        total: RATE_LIMIT
+      };
+    }
+    
+    // Increment count
+    rateLimitStore[ip].count += 1;
     await saveRateLimitStore(rateLimitStore);
-  }
-  
-  // Check if IP exists in store
-  if (!rateLimitStore[ip] || rateLimitStore[ip].resetTime < now) {
-    // Create new entry or reset expired entry
-    rateLimitStore[ip] = {
-      count: 1,
-      resetTime: now + RATE_LIMIT_WINDOW
+    console.log(`Updated rate limit for IP ${ip}: count=${rateLimitStore[ip].count}, resetTime=${new Date(rateLimitStore[ip].resetTime).toISOString()}`);
+    
+    return {
+      allowed: true,
+      remaining: RATE_LIMIT - rateLimitStore[ip].count,
+      resetTime: rateLimitStore[ip].resetTime,
+      total: RATE_LIMIT
     };
-    await saveRateLimitStore(rateLimitStore);
+  } catch (error) {
+    console.error('Error in checkRateLimit:', error);
+    
+    // Fallback to a default response if there's an error
     return {
       allowed: true,
       remaining: RATE_LIMIT - 1,
-      resetTime: rateLimitStore[ip].resetTime,
+      resetTime: now + RATE_LIMIT_WINDOW,
       total: RATE_LIMIT
     };
   }
-  
-  // Check if rate limit exceeded
-  if (rateLimitStore[ip].count >= RATE_LIMIT) {
-    return {
-      allowed: false,
-      remaining: 0,
-      resetTime: rateLimitStore[ip].resetTime,
-      total: RATE_LIMIT
-    };
-  }
-  
-  // Increment count
-  rateLimitStore[ip].count += 1;
-  await saveRateLimitStore(rateLimitStore);
-  
-  return {
-    allowed: true,
-    remaining: RATE_LIMIT - rateLimitStore[ip].count,
-    resetTime: rateLimitStore[ip].resetTime,
-    total: RATE_LIMIT
-  };
 }
 
 const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
