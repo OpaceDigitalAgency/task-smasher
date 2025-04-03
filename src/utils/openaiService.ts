@@ -70,11 +70,15 @@ export const OpenAIService = {
     rateLimit: RateLimitInfo;
   }> {
     try {
+      // Get the current API call count from localStorage
+      const apiCallCount = parseInt(localStorage.getItem('apiCallCount') || '0', 10);
+      
       // Use the Netlify function proxy instead of direct OpenAI API
       const response = await fetch('/api/openai-proxy', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-API-Call-Count': apiCallCount.toString() // Send the current count to the server
         },
         body: JSON.stringify(request),
       });
@@ -101,18 +105,22 @@ export const OpenAIService = {
 
       const data = await response.json() as ChatCompletionResponse;
       
-      // Store the rate limit info in localStorage for debugging
-      localStorage.setItem('lastApiCallRateLimitInfo', JSON.stringify({
-        ...rateLimit,
+      // Increment the API call count in localStorage
+      const newApiCallCount = apiCallCount + 1;
+      localStorage.setItem('apiCallCount', newApiCallCount.toString());
+      console.log(`API call count updated: ${newApiCallCount}`);
+      
+      // Update the rate limit info in localStorage
+      localStorage.setItem('rateLimitInfo', JSON.stringify({
+        limit: rateLimit.limit,
+        remaining: rateLimit.remaining,
         reset: rateLimit.reset.toISOString(),
-        timestamp: new Date().toISOString(),
-        endpoint: 'createChatCompletion'
+        used: newApiCallCount, // Use our local counter for consistency
+        timestamp: new Date().toISOString()
       }));
       
-      // Also update a counter in localStorage
-      const apiCallCount = parseInt(localStorage.getItem('apiCallCount') || '0', 10) + 1;
-      localStorage.setItem('apiCallCount', apiCallCount.toString());
-      console.log(`API call count (from localStorage): ${apiCallCount}`);
+      // Override the used count with our local counter for consistency
+      rateLimit.used = newApiCallCount;
       
       return { data, rateLimit };
     } catch (error) {
@@ -151,7 +159,34 @@ export const OpenAIService = {
    */
   async getRateLimitStatus(): Promise<RateLimitInfo> {
     try {
-      // Use the dedicated rate limit status endpoint
+      // First, check if we have rate limit info in localStorage
+      const storedRateLimitInfo = localStorage.getItem('rateLimitInfo');
+      
+      if (storedRateLimitInfo) {
+        try {
+          console.log('Found stored rate limit info in localStorage');
+          const parsedInfo = JSON.parse(storedRateLimitInfo);
+          console.log('Parsed stored rate limit info:', parsedInfo);
+          
+          // Check if the stored info is still valid (not expired)
+          const resetTime = new Date(parsedInfo.reset);
+          if (resetTime > new Date()) {
+            // The stored info is still valid
+            return {
+              limit: parsedInfo.limit,
+              remaining: parsedInfo.remaining,
+              reset: resetTime,
+              used: parsedInfo.used
+            };
+          } else {
+            console.log('Stored rate limit info is expired, fetching new info');
+          }
+        } catch (e) {
+          console.error('Error parsing stored rate limit info:', e);
+        }
+      }
+      
+      // If we don't have valid stored info, fetch it from the server
       console.log('Fetching rate limit status from dedicated endpoint');
       
       // Add a cache-busting parameter to prevent caching
@@ -170,12 +205,6 @@ export const OpenAIService = {
         throw new Error(`Failed to get rate limit status: ${response.statusText}`);
       }
       
-      // Log all headers for debugging
-      console.log('Response headers:');
-      response.headers.forEach((value, key) => {
-        console.log(`${key}: ${value}`);
-      });
-      
       // Extract rate limit information from headers
       const rateLimit: RateLimitInfo = {
         limit: parseInt(response.headers.get('X-RateLimit-Limit') || '20', 10),
@@ -184,30 +213,28 @@ export const OpenAIService = {
         used: parseInt(response.headers.get('X-RateLimit-Used') || '0', 10)
       };
       
-      console.log('Rate limit status from headers:', rateLimit);
+      console.log('Rate limit status from server:', rateLimit);
       
-      // Also parse the response body as a fallback
-      const data = await response.json();
-      console.log('Rate limit status from body:', data);
+      // Get the API call count from localStorage
+      const apiCallCount = parseInt(localStorage.getItem('apiCallCount') || '0', 10);
       
-      // Use body data if available, otherwise use header data
-      const result = {
-        limit: data.limit || rateLimit.limit,
-        remaining: data.remaining || rateLimit.remaining,
-        reset: new Date(data.reset) || rateLimit.reset,
-        used: data.used || rateLimit.used
-      };
+      // If our local count is higher, use that instead
+      if (apiCallCount > rateLimit.used) {
+        console.log(`Using local API call count (${apiCallCount}) instead of server count (${rateLimit.used})`);
+        rateLimit.used = apiCallCount;
+        rateLimit.remaining = Math.max(0, rateLimit.limit - apiCallCount);
+      }
       
-      console.log('Final rate limit status:', result);
-      
-      // Store the rate limit info in localStorage for debugging
-      localStorage.setItem('lastRateLimitInfo', JSON.stringify({
-        ...result,
-        reset: result.reset.toISOString(),
+      // Store the updated rate limit info in localStorage
+      localStorage.setItem('rateLimitInfo', JSON.stringify({
+        limit: rateLimit.limit,
+        remaining: rateLimit.remaining,
+        reset: rateLimit.reset.toISOString(),
+        used: rateLimit.used,
         timestamp: new Date().toISOString()
       }));
       
-      return result;
+      return rateLimit;
     } catch (error) {
       console.error('Error getting rate limit status:', error);
       
