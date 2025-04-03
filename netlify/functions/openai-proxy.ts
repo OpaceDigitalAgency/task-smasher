@@ -35,8 +35,18 @@ async function loadRateLimitStore(): Promise<RateLimitStore> {
     
     if (blob) {
       try {
-        // Parse the blob data
-        const data = blob.toString();
+        // Parse the blob data - handle different possible formats
+        let data;
+        if (typeof blob === 'string') {
+          data = blob;
+        } else if (blob instanceof Uint8Array) {
+          data = new TextDecoder().decode(blob);
+        } else if (typeof blob.toString === 'function') {
+          data = blob.toString();
+        } else {
+          data = String(blob);
+        }
+        
         console.log('Loaded rate limit data:', data);
         return JSON.parse(data);
       } catch (parseError) {
