@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
-import { Brain, CheckCircle2, Plus, Settings, Sparkles, ArrowRight, Target, Trash2, Clock, Undo, Mic, Filter, Download, Upload, FileSpreadsheet, File as FilePdf, Key, DollarSign, Zap, Info, Star, ChevronDown, ChevronUp, Sliders } from 'lucide-react';
-import { 
-  DndContext, 
-  DragEndEvent, 
-  closestCenter, 
-  useSensor, 
-  useSensors, 
-  PointerSensor, 
-  DragOverlay, 
-  DragStartEvent 
+import { Brain, CheckCircle2, Plus, Settings, Sparkles, ArrowRight, Target, Trash2, Clock, Undo, Mic, Filter, Download, Upload, FileSpreadsheet, File as FilePdf, Key, DollarSign, Zap, Info, Star, ChevronDown, ChevronUp, Sliders, MessageSquare } from 'lucide-react';
+import {
+  DndContext,
+  DragEndEvent,
+  closestCenter,
+  useSensor,
+  useSensors,
+  PointerSensor,
+  DragOverlay,
+  DragStartEvent
 } from '@dnd-kit/core';
 import { SortableContext, arrayMove } from '@dnd-kit/sortable';
 
@@ -18,14 +18,14 @@ import Board from './components/Board';
 import Task from './components/Task';
 import Sidebar from './components/Sidebar';
 import TaskMismatchPopup from './components/TaskMismatchPopup';
+import OpenAIExample from './components/OpenAIExample';
 
 function App() {
-  const { 
-    openAIKey,
-    setOpenAIKey,
+  const {
     selectedModel,
     setSelectedModel,
     totalCost,
+    rateLimited,
     executionCount,
     boards,
     setBoards,
@@ -80,6 +80,7 @@ function App() {
 
   const [filtersExpanded, setFiltersExpanded] = useState(false);
   const [sliderExpanded, setSliderExpanded] = useState(false);
+  const [showOpenAIExample, setShowOpenAIExample] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -202,16 +203,7 @@ function App() {
         <div className="bg-white/80 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200/80 p-4 mb-6 transition-all duration-300">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full sm:w-auto">
-              <div className="relative">
-                <input
-                  type="password"
-                  value={openAIKey}
-                  onChange={(e) => setOpenAIKey(e.target.value)}
-                  placeholder="OpenAI API Key"
-                  className="pl-8 pr-3 py-1.5 text-sm rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent w-full sm:w-64"
-                />
-                <Key className="w-4 h-4 text-gray-400 absolute left-2 top-1/2 -translate-y-1/2" />
-              </div>
+              {/* API key input removed - now using secure backend proxy */}
               <select
                 value={selectedModel}
                 onChange={(e) => setSelectedModel(e.target.value)}
@@ -246,6 +238,12 @@ function App() {
                 <DollarSign className="w-4 h-4 text-green-500" />
                 <span className="text-gray-600">Estimated cost: ${totalCost.toFixed(4)}</span>
               </div>
+              {typeof rateLimited !== 'undefined' && rateLimited && (
+                <div className="flex items-center gap-2 text-sm bg-red-50 text-red-600 px-2 py-1 rounded-md">
+                  <Info className="w-4 h-4" />
+                  <span>Rate limit reached (5/hour)</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -278,6 +276,13 @@ function App() {
               >
                 <Undo className="w-4 h-4" />
                 <span className="hidden sm:inline">Undo</span>
+              </button>
+              <button
+                onClick={() => setShowOpenAIExample(!showOpenAIExample)}
+                className="text-gray-700 px-3 py-1.5 text-sm rounded-lg border border-gray-200 hover:bg-gray-50 flex items-center gap-2"
+              >
+                <MessageSquare className="w-4 h-4" />
+                <span className="hidden sm:inline">OpenAI Proxy</span>
               </button>
             </div>
           </div>
@@ -580,6 +585,24 @@ function App() {
         )}
         
         {/* Task Mismatch Popup */}
+        {showOpenAIExample && (
+          <div className="mt-8 mb-4">
+            <div className="bg-white/80 backdrop-blur-sm rounded-lg shadow-md border border-gray-200/80 p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold text-gray-900">OpenAI Proxy Example</h2>
+                <button
+                  onClick={() => setShowOpenAIExample(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <span className="sr-only">Close</span>
+                  &times;
+                </button>
+              </div>
+              <OpenAIExample />
+            </div>
+          </div>
+        )}
+        
         <TaskMismatchPopup
           isVisible={taskMismatch.showing}
           reason={taskMismatch.reason}

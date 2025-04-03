@@ -2,15 +2,15 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Board, EditingState, FeedbackState, Task, TaskMismatchData } from '../types';
 import { filterTasksByPriority, filterTasksByRating } from '../utils/taskUtils';
 import { validateTaskLocally, validateTaskWithAI } from '../utils/taskContextValidator';
-
-const API_URL = 'https://api.openai.com/v1/chat/completions';
+import OpenAIService from '../utils/openaiService';
 
 export function useTasks() {
-  const [openAIKey, setOpenAIKey] = useState(import.meta.env.VITE_OPENAI_API_KEY || '');
+  // Removed openAIKey state as we're now using the proxy
   const [selectedModel, setSelectedModel] = useState('gpt-3.5-turbo');
   const [totalCost, setTotalCost] = useState(0);
   const [executionCount, setExecutionCount] = useState(0);
   const [selectedUseCase, setSelectedUseCase] = useState<string | null>('daily');
+  const [rateLimited, setRateLimited] = useState(false);
   
   const [boards, setBoards] = useState<Board[]>([
     { id: 'todo', title: 'To Do', tasks: [] },
@@ -31,11 +31,11 @@ export function useTasks() {
   const [filterRating, setFilterRating] = useState<0 | 1 | 2 | 3 | 4 | 5>(0);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [isDraggingOver, setIsDraggingOver] = useState<string | null>(null);
-  const [editing, setEditing] = useState<EditingState>({ 
-    taskId: null, 
-    subtaskId: null, 
-    field: null, 
-    value: '' 
+  const [editing, setEditing] = useState<EditingState>({
+    taskId: null,
+    subtaskId: null,
+    field: null,
+    value: ''
   });
   
   // Task mismatch states
@@ -105,19 +105,33 @@ export function useTasks() {
   const checkTaskContext = useCallback(async (taskText: string) => {
     if (!selectedUseCase || !taskText.trim()) return true;
     
-    const result = await validateTaskWithAI(taskText, selectedUseCase, openAIKey);
-    
-    if (!result.isValid && result.confidence > 0.6) {
-      setTaskMismatch({
-        showing: true,
-        reason: result.reason,
-        suggestedUseCase: result.suggestedUseCase
-      });
-      return false;
+    try {
+      // Use the updated validateTaskWithAI function that uses the proxy
+      const result = await validateTaskWithAI(taskText, selectedUseCase);
+      
+      if (!result.isValid && result.confidence > 0.6) {
+        setTaskMismatch({
+          showing: true,
+          reason: result.reason,
+          suggestedUseCase: result.suggestedUseCase
+        });
+        return false;
+      }
+      
+      return true;
+    } catch (error) {
+      // Check if the error is due to rate limiting
+      if (error instanceof Error && error.message.includes('Rate limit exceeded')) {
+        setRateLimited(true);
+        // Use local validation as fallback
+        const result = validateTaskLocally(taskText, selectedUseCase);
+        return result.isValid || result.confidence <= 0.6;
+      }
+      
+      console.error('Error validating task context:', error);
+      return true;
     }
-    
-    return true;
-  }, [selectedUseCase, openAIKey]);
+  }, [selectedUseCase]);
 
   const handleAddTask = useCallback(async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -173,7 +187,7 @@ export function useTasks() {
       value: currentValue
     });
   }, []);
-  console.log("🔁 This is a test update 2.");
+
   const handleEditSave = useCallback((boardId: string) => {
     const { taskId, subtaskId, field, value } = editing;
     
@@ -504,14 +518,13 @@ export function useTasks() {
         try {
           setNewTask('Processing audio...');
           
-          // Send to Whisper API
-          const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${openAIKey}`
-            },
-            body: formData
-          });
+          // Use local transcription or disable this feature
+          setNewTask('Voice transcription is not available without direct API access');
+          setIsListening(false);
+          return;
+          
+          /* Voice transcription requires direct API access and can't be proxied easily
+          // This feature is disabled when using the proxy
           
           if (!response.ok) {
             throw new Error(`API error: ${response.status}`);
@@ -529,6 +542,7 @@ export function useTasks() {
               }
             }, 1000);
           }
+          */
         } catch (error) {
           console.error('Error processing audio:', error);
           setNewTask(error instanceof Error ? error.message : 'Error processing audio. Please try again.');
@@ -563,11 +577,6 @@ export function useTasks() {
   };
   
   const regenerateTask = async (taskId: string) => {
-    if (!openAIKey) {
-      alert('Please enter your OpenAI API key first.');
-      return;
-    }
-    
     const task = boards.flatMap(b => b.tasks).find(t => t.id === taskId);
     if (!task) return;
     
@@ -575,28 +584,25 @@ export function useTasks() {
     setGenerating(true);
     
     try {
-      const response = await fetch(API_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${openAIKey}`
-        },
-        body: JSON.stringify({
-          model: selectedModel,
-          messages: [
-            {
-              role: 'system',
-              content: 'You are a task management AI assistant. Rewrite this task to make it clearer and more actionable.'
-            },
-            {
-              role: 'user',
-              content: `Rewrite this task to make it more clear and actionable: "${task.title}"`
-            }
-          ]
-        })
+      // Use OpenAIService to make the request through the proxy
+      const { data, rateLimit } = await OpenAIService.createChatCompletion({
+        model: selectedModel,
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a task management AI assistant. Rewrite this task to make it clearer and more actionable.'
+          },
+          {
+            role: 'user',
+            content: `Rewrite this task to make it more clear and actionable: "${task.title}"`
+          }
+        ]
       });
       
-      const data = await response.json();
+      // Update rate limit status
+      if (rateLimit.remaining === 0) {
+        setRateLimited(true);
+      }
       
       if (data.choices && data.choices[0]) {
         const improvedTask = data.choices[0].message.content.trim();
@@ -626,6 +632,12 @@ export function useTasks() {
       }
     } catch (error) {
       console.error('Error regenerating task:', error);
+      
+      // Check if the error is due to rate limiting
+      if (error instanceof Error && error.message.includes('Rate limit exceeded')) {
+        setRateLimited(true);
+        alert('Rate limit exceeded. Please try again later.');
+      }
     } finally {
       setGenerating(false);
       setActiveTask(null);
@@ -633,11 +645,6 @@ export function useTasks() {
   };
   
   const handleGenerateSubtasks = async (taskId: string) => {
-    if (!openAIKey) {
-      alert('Please enter your OpenAI API key first.');
-      return;
-    }
-    
     const task = boards.flatMap(b => b.tasks).find(t => t.id === taskId);
     if (!task) return;
     
@@ -645,28 +652,25 @@ export function useTasks() {
     setGenerating(true);
     
     try {
-      const response = await fetch(API_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${openAIKey}`
-        },
-        body: JSON.stringify({
-          model: selectedModel,
-          messages: [
-            {
-              role: 'system',
-              content: `You are a task management AI assistant. Break down tasks into specific, actionable subtasks. Provide ${breakdownLevel} subtasks. Return ONLY a JSON array of subtasks in the format [{"title": "Subtask title", "estimatedTime": 0.5, "priority": "low|medium|high"}].`
-            },
-            {
-              role: 'user',
-              content: `Break down this task into ${breakdownLevel} specific, actionable subtasks: "${task.title}"${task.context ? `\nContext: ${task.context}` : ''}`
-            }
-          ]
-        })
+      // Use OpenAIService to make the request through the proxy
+      const { data, rateLimit } = await OpenAIService.createChatCompletion({
+        model: selectedModel,
+        messages: [
+          {
+            role: 'system',
+            content: `You are a task management AI assistant. Break down tasks into specific, actionable subtasks. Provide ${breakdownLevel} subtasks. Return ONLY a JSON array of subtasks in the format [{"title": "Subtask title", "estimatedTime": 0.5, "priority": "low|medium|high"}].`
+          },
+          {
+            role: 'user',
+            content: `Break down this task into ${breakdownLevel} specific, actionable subtasks: "${task.title}"${task.context ? `\nContext: ${task.context}` : ''}`
+          }
+        ]
       });
       
-      const data = await response.json();
+      // Update rate limit status
+      if (rateLimit.remaining === 0) {
+        setRateLimited(true);
+      }
       
       if (data.choices && data.choices[0]) {
         let subtasksContent = data.choices[0].message.content.trim();
@@ -720,6 +724,12 @@ export function useTasks() {
       }
     } catch (error) {
       console.error('Error generating subtasks:', error);
+      
+      // Check if the error is due to rate limiting
+      if (error instanceof Error && error.message.includes('Rate limit exceeded')) {
+        setRateLimited(true);
+        alert('Rate limit exceeded. Please try again later.');
+      }
     } finally {
       setGenerating(false);
       setActiveTask(null);
@@ -734,40 +744,34 @@ export function useTasks() {
   }, []);
   
   const handleGenerateIdeas = async () => {
-    if (!openAIKey) {
-      alert('Please enter your OpenAI API key first.');
-      return;
-    }
-
     try {
-      const response = await fetch(API_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${openAIKey}`
-        },
-        body: JSON.stringify({
-          model: selectedModel,
-          messages: [
-            {
-              role: 'system',
-              content: 'You are a helpful assistant that generates creative task ideas. Return a list of 5 task ideas, one per line, no numbers or bullets.'
-            },
-            {
-              role: 'user',
-              content: `Generate 5 task ideas for ${selectedUseCase || 'general productivity'}`
-            }
-          ]
-        })
+      // Use OpenAIService to make the request through the proxy
+      const { data, rateLimit } = await OpenAIService.createChatCompletion({
+        model: selectedModel,
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a helpful assistant that generates creative task ideas. Return a list of 5 task ideas, one per line, no numbers or bullets.'
+          },
+          {
+            role: 'user',
+            content: `Generate 5 task ideas for ${selectedUseCase || 'general productivity'}`
+          }
+        ]
       });
-
-      const data = await response.json();
+      
+      // Update rate limit status
+      if (rateLimit.remaining === 0) {
+        setRateLimited(true);
+      }
       
       if (data.choices && data.choices[0]) {
-        const ideas = data.choices[0].message.content
+        // Parse the response into an array of ideas
+        const responseText = data.choices[0].message.content;
+        const ideas = responseText
           .split('\n')
-          .filter(Boolean)
-          .map((idea: string) => idea.replace(/^\d+\.\s*|-\s*|\*\s*/, '').trim());
+          .filter(line => line.trim().length > 0)
+          .map(line => line.replace(/^\d+\.\s*|-\s*|\*\s*/, '').trim());
         
         setHistory(prev => [...prev, boards]);
         
@@ -781,7 +785,7 @@ export function useTasks() {
                   ...board, 
                   tasks: [
                     ...board.tasks, 
-                    ...ideas.map((idea: string, index: number) => ({
+                    ...ideas.map((idea, index) => ({
                       id: `task-${Date.now()}-${index}`,
                       title: idea,
                       subtasks: [],
@@ -802,6 +806,12 @@ export function useTasks() {
       }
     } catch (error) {
       console.error('Error generating ideas:', error);
+      
+      // Check if the error is due to rate limiting
+      if (error instanceof Error && error.message.includes('Rate limit exceeded')) {
+        setRateLimited(true);
+        alert('Rate limit exceeded. Please try again later.');
+      }
     }
   };
   
@@ -819,8 +829,7 @@ export function useTasks() {
   }, [boards, filterPriority, filterRating]);
 
   return {
-    openAIKey,
-    setOpenAIKey,
+    // Removed openAIKey and setOpenAIKey
     selectedModel,
     setSelectedModel,
     totalCost,
@@ -853,6 +862,7 @@ export function useTasks() {
     editing,
     taskMismatch,
     setTaskMismatch,
+    rateLimited, // Added rate limited state
     handleAddTask,
     startEditing,
     handleEditSave,

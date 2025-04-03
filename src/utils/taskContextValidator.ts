@@ -1,4 +1,5 @@
 import { useCaseDefinitions } from './useCaseDefinitions';
+import OpenAIService from './openaiService';
 
 type ValidationResult = {
   isValid: boolean;
@@ -67,19 +68,13 @@ export const validateTaskLocally = (task: string, useCase: string): ValidationRe
 };
 
 /**
- * Validates the task using OpenAI API if a key is available.
- * Falls back to local validation if no key or network issues.
+ * Validates the task using OpenAI API through our proxy.
+ * Falls back to local validation if there are any issues.
  */
 export const validateTaskWithAI = async (
-  task: string, 
-  useCase: string,
-  openAIKey: string
+  task: string,
+  useCase: string
 ): Promise<ValidationResult> => {
-  // If no API key is provided, fall back to local validation
-  if (!openAIKey) {
-    return validateTaskLocally(task, useCase);
-  }
-  
   try {
     const prompt = `
 Task: "${task}"
@@ -97,13 +92,9 @@ Response format (JSON):
 }
 `;
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${openAIKey}`
-      },
-      body: JSON.stringify({
+    try {
+      // Use our OpenAIService to make the request through the proxy
+      const { data } = await OpenAIService.createChatCompletion({
         model: 'gpt-3.5-turbo',
         messages: [
           {
@@ -115,47 +106,48 @@ Response format (JSON):
             content: prompt
           }
         ]
-      })
-    });
-
-    const data = await response.json();
-    
-    if (data.error) {
-      console.error('OpenAI API error:', data.error);
-      return validateTaskLocally(task, useCase);
-    }
-    
-    if (data.choices && data.choices[0]) {
-      try {
-        const responseContent = data.choices[0].message.content;
-        const parsedResponse = JSON.parse(responseContent);
-        
-        // Convert suggested category name to useCase id
-        let suggestedUseCase = undefined;
-        if (!parsedResponse.isValid && parsedResponse.suggestedCategory) {
-          for (const [id, def] of Object.entries(useCaseDefinitions)) {
-            if (def.label.toLowerCase() === parsedResponse.suggestedCategory.toLowerCase()) {
-              suggestedUseCase = id;
-              break;
+      });
+      
+      if (data.choices && data.choices[0]) {
+        try {
+          const responseContent = data.choices[0].message.content;
+          const parsedResponse = JSON.parse(responseContent);
+          
+          // Convert suggested category name to useCase id
+          let suggestedUseCase = undefined;
+          if (!parsedResponse.isValid && parsedResponse.suggestedCategory) {
+            for (const [id, def] of Object.entries(useCaseDefinitions)) {
+              if (def.label.toLowerCase() === parsedResponse.suggestedCategory.toLowerCase()) {
+                suggestedUseCase = id;
+                break;
+              }
             }
           }
+          
+          return {
+            isValid: parsedResponse.isValid,
+            confidence: parsedResponse.confidence,
+            reason: parsedResponse.reason,
+            suggestedUseCase
+          };
+        } catch (error) {
+          console.error('Error parsing OpenAI response:', error);
+          return validateTaskLocally(task, useCase);
         }
-        
-        return {
-          isValid: parsedResponse.isValid,
-          confidence: parsedResponse.confidence,
-          reason: parsedResponse.reason,
-          suggestedUseCase
-        };
-      } catch (error) {
-        console.error('Error parsing OpenAI response:', error);
-        return validateTaskLocally(task, useCase);
+      }
+    } catch (error) {
+      // Handle rate limiting errors
+      if (error instanceof Error && error.message.includes('Rate limit exceeded')) {
+        console.warn('Rate limit exceeded for OpenAI API. Using local validation instead.');
+      } else {
+        console.error('Error calling OpenAI API:', error);
       }
     }
     
+    // Fall back to local validation
     return validateTaskLocally(task, useCase);
   } catch (error) {
-    console.error('Error calling OpenAI API:', error);
+    console.error('Error in validateTaskWithAI:', error);
     return validateTaskLocally(task, useCase);
   }
 };
