@@ -173,7 +173,7 @@ export function useTasks() {
       value: currentValue
     });
   }, []);
-  console.log("🔁 This is a test update.");
+  console.log("🔁 This is a test update 2.");
   const handleEditSave = useCallback((boardId: string) => {
     const { taskId, subtaskId, field, value } = editing;
     
