@@ -150,6 +150,31 @@ export function useTasks(): TasksContextType {
     localStorage.setItem('rateLimitInfo', JSON.stringify(rateLimitInfoForStorage));
   }, [rateLimitInfo]);
   
+  // Synchronize with server-side rate limit information on page load
+  useEffect(() => {
+    const syncRateLimitWithServer = async () => {
+      try {
+        // Get the current rate limit status from the server
+        const serverRateLimit = await OpenAIService.getRateLimitStatus();
+        
+        // Update the client-side state with the server-side information
+        setRateLimitInfo(serverRateLimit);
+        
+        // Also update the executionCount to match the server's used count
+        // This ensures the "API Calls" counter matches the "API Usage" display
+        setExecutionCount(serverRateLimit.used);
+        
+        // Update the rateLimited state based on the server response
+        setRateLimited(serverRateLimit.remaining === 0);
+      } catch (error) {
+        console.error('Error synchronizing with server rate limit:', error);
+      }
+    };
+    
+    // Call the synchronization function on page load
+    syncRateLimitWithServer();
+  }, []);
+  
   
   // Save totalCost to localStorage when it changes
   useEffect(() => {
@@ -681,8 +706,11 @@ export function useTasks(): TasksContextType {
           });
         });
         
+        // Update cost
         setTotalCost(prev => prev + (data.usage?.total_tokens || 0) * 0.000002);
-        setExecutionCount(prev => prev + 1);
+        
+        // Update execution count to match server's rate limit info
+        setExecutionCount(rateLimit.used);
       }
     } catch (error) {
       console.error('Error regenerating task:', error);
@@ -851,8 +879,11 @@ Make sure to include all necessary ingredients with precise measurements before 
               });
             });
             
+            // Update cost
             setTotalCost(prev => prev + (data.usage?.total_tokens || 0) * 0.000002);
-            setExecutionCount(prev => prev + 1);
+            
+            // Update execution count to match server's rate limit info
+            setExecutionCount(rateLimit.used);
           }
         } catch (error) {
           console.error('Error parsing subtasks:', error);
@@ -1009,8 +1040,11 @@ Make sure to include all necessary ingredients with precise measurements before 
           );
         });
 
+        // Update cost
         setTotalCost(prev => prev + (data.usage?.total_tokens || 0) * 0.000002);
-        setExecutionCount(prev => prev + 1);
+        
+        // Update execution count to match server's rate limit info
+        setExecutionCount(rateLimit.used);
       
     } catch (error) {
       console.error('Error generating ideas:', error);
