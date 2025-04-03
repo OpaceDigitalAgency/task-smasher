@@ -7,15 +7,39 @@ import OpenAIService from '../utils/openaiService';
 export function useTasks(): TasksContextType {
   // Removed openAIKey state as we're now using the proxy
   const [selectedModel, setSelectedModel] = useState('gpt-3.5-turbo');
-  const [totalCost, setTotalCost] = useState(0);
-  const [executionCount, setExecutionCount] = useState(0);
+  const [totalCost, setTotalCost] = useState(() => {
+    const savedCost = localStorage.getItem('totalCost');
+    return savedCost ? parseFloat(savedCost) : 0;
+  });
+  const [executionCount, setExecutionCount] = useState(() => {
+    const savedCount = localStorage.getItem('executionCount');
+    return savedCount ? parseInt(savedCount, 10) : 0;
+  });
   const [selectedUseCase, setSelectedUseCase] = useState<string | null>('daily');
-  const [rateLimited, setRateLimited] = useState(false);
-  const [rateLimitInfo, setRateLimitInfo] = useState<{ limit: number; remaining: number; used: number; reset: Date }>({
-    limit: 20,
-    remaining: 20,
-    used: 0,
-    reset: new Date(Date.now() + 3600000)
+  const [rateLimited, setRateLimited] = useState(() => {
+    const savedRateLimited = localStorage.getItem('rateLimited');
+    return savedRateLimited ? savedRateLimited === 'true' : false;
+  });
+  
+  const [rateLimitInfo, setRateLimitInfo] = useState<{ limit: number; remaining: number; used: number; reset: Date }>(() => {
+    const savedRateLimitInfo = localStorage.getItem('rateLimitInfo');
+    if (savedRateLimitInfo) {
+      try {
+        const parsed = JSON.parse(savedRateLimitInfo);
+        return {
+          ...parsed,
+          reset: new Date(parsed.reset) // Convert the ISO string back to a Date object
+        };
+      } catch (e) {
+        console.error('Error parsing rateLimitInfo from localStorage:', e);
+      }
+    }
+    return {
+      limit: 20,
+      remaining: 20,
+      used: 0,
+      reset: new Date(Date.now() + 3600000)
+    };
   });
   
   const [boards, setBoards] = useState<Board[]>([
@@ -107,6 +131,30 @@ export function useTasks(): TasksContextType {
       document.head.removeChild(style);
     };
   }, []);
+  // Save executionCount to localStorage when it changes
+  useEffect(() => {
+    localStorage.setItem('executionCount', executionCount.toString());
+  }, [executionCount]);
+  
+  // Save rateLimited to localStorage when it changes
+  useEffect(() => {
+    localStorage.setItem('rateLimited', rateLimited.toString());
+  }, [rateLimited]);
+  
+  // Save rateLimitInfo to localStorage when it changes
+  useEffect(() => {
+    const rateLimitInfoForStorage = {
+      ...rateLimitInfo,
+      reset: rateLimitInfo.reset.toISOString() // Convert Date to ISO string for storage
+    };
+    localStorage.setItem('rateLimitInfo', JSON.stringify(rateLimitInfoForStorage));
+  }, [rateLimitInfo]);
+  
+  
+  // Save totalCost to localStorage when it changes
+  useEffect(() => {
+    localStorage.setItem('totalCost', totalCost.toString());
+  }, [totalCost]);
 
   const checkTaskContext = useCallback(async (taskText: string) => {
     if (!selectedUseCase || !taskText.trim()) return true;
