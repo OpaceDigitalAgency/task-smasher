@@ -5,6 +5,7 @@ export default defineConfig({
   base: '/tools/task-smasher/',
   plugins: [react()],
   build: {
+    outDir: 'dist/tools/task-smasher',
     rollupOptions: {
       output: {
         manualChunks: {

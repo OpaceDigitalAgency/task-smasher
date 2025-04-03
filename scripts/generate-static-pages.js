@@ -73,10 +73,10 @@ const useCaseDefinitions = {
 const templatePath = path.join(__dirname, '..', 'index.html');
 const template = fs.readFileSync(templatePath, 'utf8');
 
-// Create the dist directory if it doesn't exist
-const distDir = path.join(__dirname, '..', 'dist');
+// Create the dist/tools/task-smasher directory if it doesn't exist
+const distDir = path.join(__dirname, '..', 'dist', 'tools', 'task-smasher');
 if (!fs.existsSync(distDir)) {
-  fs.mkdirSync(distDir);
+  fs.mkdirSync(distDir, { recursive: true });
 }
 
 // Generate a static HTML file for each use case
