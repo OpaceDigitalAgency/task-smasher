@@ -156,6 +156,24 @@ export function useTasks(): TasksContextType {
       try {
         console.log('Synchronizing with server rate limit on page load');
         
+        // Check localStorage for stored API call count
+        const storedApiCallCount = localStorage.getItem('apiCallCount');
+        if (storedApiCallCount) {
+          console.log('Found stored API call count in localStorage:', storedApiCallCount);
+        }
+        
+        // Check localStorage for stored rate limit info
+        const storedRateLimitInfo = localStorage.getItem('lastRateLimitInfo');
+        if (storedRateLimitInfo) {
+          console.log('Found stored rate limit info in localStorage:', storedRateLimitInfo);
+          try {
+            const parsedInfo = JSON.parse(storedRateLimitInfo);
+            console.log('Parsed stored rate limit info:', parsedInfo);
+          } catch (e) {
+            console.error('Error parsing stored rate limit info:', e);
+          }
+        }
+        
         // Get the current rate limit status from the server
         const serverRateLimit = await OpenAIService.getRateLimitStatus();
         console.log('Received server rate limit:', serverRateLimit);
@@ -171,6 +189,15 @@ export function useTasks(): TasksContextType {
         // Update the rateLimited state based on the server response
         setRateLimited(serverRateLimit.remaining === 0);
         console.log('Updated rateLimited to:', serverRateLimit.remaining === 0);
+        
+        // If we have a stored API call count, use that instead if it's higher
+        if (storedApiCallCount) {
+          const parsedCount = parseInt(storedApiCallCount, 10);
+          if (!isNaN(parsedCount) && parsedCount > serverRateLimit.used) {
+            console.log(`Using stored API call count (${parsedCount}) instead of server count (${serverRateLimit.used})`);
+            setExecutionCount(parsedCount);
+          }
+        }
       } catch (error) {
         console.error('Error synchronizing with server rate limit:', error);
       }
