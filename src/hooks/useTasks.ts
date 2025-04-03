@@ -707,9 +707,16 @@ export function useTasks() {
       let userPrompt = `Break down this task into ${intelligentBreakdownLevel} specific, actionable subtasks: "${task.title}"${task.context ? `\nContext: ${task.context}` : ''}`;
       
       // Customize prompts based on use case
-      if (selectedUseCase === 'recipe' && task.title.toLowerCase().includes('recipe')) {
-        systemPrompt = `You are a culinary expert. Break down recipes into clear steps with detailed ingredients (including exact measurements like "2 eggs", "1 cup flour") and cooking instructions. Return ONLY a JSON array in the format [{"title": "Step description", "estimatedTime": time_in_minutes, "priority": "low|medium|high"}].`;
-        userPrompt = `Break down this recipe into ${intelligentBreakdownLevel} cooking steps: "${task.title}". First, list all ingredients with exact measurements (e.g., 2 eggs, 1 cup flour, 2 tbsp butter), then include detailed preparation and cooking instructions.${task.context ? `\nContext: ${task.context}` : ''}`;
+      if (selectedUseCase === 'recipe' || task.title.toLowerCase().includes('cake') || task.title.toLowerCase().includes('recipe') || task.title.toLowerCase().includes('bake') || task.title.toLowerCase().includes('cook')) {
+        // For recipes, we need to ensure we get a higher number of subtasks and specific ingredients
+        const recipeSubtaskCount = Math.max(intelligentBreakdownLevel, 6); // At least 6 subtasks for recipes
+        setBreakdownLevel(recipeSubtaskCount);
+        
+        systemPrompt = `You are a culinary expert. Break down recipes into clear steps with a DETAILED INGREDIENTS LIST first, followed by preparation steps. The first 1-3 subtasks MUST be a list of ingredients with EXACT measurements (e.g., "Ingredients: 2 eggs, 1 cup flour, 1/2 cup sugar, 2 tbsp butter, 1 tsp vanilla extract"). Return ONLY a JSON array in the format [{"title": "Step description", "estimatedTime": time_in_minutes, "priority": "low|medium|high"}].`;
+        userPrompt = `Break down this recipe into ${recipeSubtaskCount} steps: "${task.title}".
+IMPORTANT: The first 1-3 subtasks MUST be a detailed ingredients list with exact measurements (e.g., "Ingredients: 2 eggs, 1 cup flour, 1/2 cup sugar").
+Then include detailed preparation and cooking instructions as separate steps.
+Make sure to include all necessary ingredients with precise measurements before any cooking steps.${task.context ? `\nContext: ${task.context}` : ''}`;
       } else if (selectedUseCase === 'marketing') {
         systemPrompt = `You are a marketing strategist. Break down marketing tasks into actionable project steps with clear deliverables. Return ONLY a JSON array in the format [{"title": "Step with deliverable", "estimatedTime": time_in_hours, "priority": "low|medium|high"}].`;
         userPrompt = `Break down this marketing task into ${intelligentBreakdownLevel} actionable project steps: "${task.title}". Include specific deliverables, timeline, and success metrics for each step.${task.context ? `\nContext: ${task.context}` : ''}`;

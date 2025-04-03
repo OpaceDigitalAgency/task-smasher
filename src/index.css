@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Animation for tooltips */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 :root {
   /* Use case specific colors */
   --daily-primary: theme('colors.blue.500');

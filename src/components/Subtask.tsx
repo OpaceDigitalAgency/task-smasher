@@ -58,9 +58,10 @@ function Subtask({ subtask, taskId, boardId, onToggleComplete, editing, startEdi
           {subtask.title}
           {subtask.feedback && renderRating()}
           
-          {/* JavaScript-based immediate tooltip */}
+          {/* Prominent tooltip that appears immediately on hover */}
           {showTooltip && (
-            <div className="absolute left-0 top-full mt-1 z-50 bg-gray-800 text-white text-xs rounded p-2 shadow-lg max-w-xs whitespace-normal break-words pointer-events-none">
+            <div style={{animation: 'fadeIn 0.15s ease-out forwards'}} className="absolute left-0 top-full mt-1 z-50 bg-gray-800 text-white text-xs rounded-md p-3 shadow-xl max-w-xs whitespace-normal break-words pointer-events-none border border-gray-700">
+              <div className="font-medium mb-1">Full Text:</div>
               {subtask.title}
             </div>
           )}
