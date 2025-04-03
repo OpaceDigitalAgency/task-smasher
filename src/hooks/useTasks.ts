@@ -1039,7 +1039,7 @@ Make sure to include all necessary ingredients with precise measurements before 
                       expanded: false,
                       boardId: 'todo'
                     }))
-                  ] 
+                  ]
                 }
               : board
           );
@@ -1057,6 +1057,8 @@ Make sure to include all necessary ingredients with precise measurements before 
       if (error instanceof Error && error.message.includes('Rate limit exceeded')) {
         setRateLimited(true);
         alert('Rate limit exceeded. Please try again later.');
+      } else {
+        alert("Failed to generate ideas. Please try again.");
       }
     } finally {
       // Always set generating to false when done, regardless of success or failure
