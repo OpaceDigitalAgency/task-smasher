@@ -156,47 +156,53 @@ export function useTasks(): TasksContextType {
       try {
         console.log('Synchronizing with server rate limit on page load');
         
-        // Check localStorage for stored API call count
-        const storedApiCallCount = localStorage.getItem('apiCallCount');
-        if (storedApiCallCount) {
-          console.log('Found stored API call count in localStorage:', storedApiCallCount);
-        }
+        // First check if we have rate limit info in localStorage
+        const storedRateLimitInfo = localStorage.getItem('rateLimitInfo');
+        let localRateLimit: RateLimitInfo | null = null;
         
-        // Check localStorage for stored rate limit info
-        const storedRateLimitInfo = localStorage.getItem('lastRateLimitInfo');
         if (storedRateLimitInfo) {
-          console.log('Found stored rate limit info in localStorage:', storedRateLimitInfo);
           try {
+            console.log('Found stored rate limit info in localStorage');
             const parsedInfo = JSON.parse(storedRateLimitInfo);
             console.log('Parsed stored rate limit info:', parsedInfo);
+            
+            // Check if the stored info is still valid (not expired)
+            const resetTime = new Date(parsedInfo.reset);
+            if (resetTime > new Date()) {
+              // The stored info is still valid
+              localRateLimit = {
+                limit: parsedInfo.limit,
+                remaining: parsedInfo.remaining,
+                reset: resetTime,
+                used: parsedInfo.used
+              };
+              
+              // Update the client-side state with the localStorage information
+              setRateLimitInfo(localRateLimit);
+              setExecutionCount(localRateLimit.used);
+              setRateLimited(localRateLimit.remaining === 0);
+              
+              console.log('Using stored rate limit info:', localRateLimit);
+            } else {
+              console.log('Stored rate limit info is expired');
+            }
           } catch (e) {
             console.error('Error parsing stored rate limit info:', e);
           }
         }
         
-        // Get the current rate limit status from the server
-        const serverRateLimit = await OpenAIService.getRateLimitStatus();
-        console.log('Received server rate limit:', serverRateLimit);
-        
-        // Update the client-side state with the server-side information
-        setRateLimitInfo(serverRateLimit);
-        
-        // Also update the executionCount to match the server's used count
-        // This ensures the "API Calls" counter matches the "API Usage" display
-        setExecutionCount(serverRateLimit.used);
-        console.log('Updated executionCount to:', serverRateLimit.used);
-        
-        // Update the rateLimited state based on the server response
-        setRateLimited(serverRateLimit.remaining === 0);
-        console.log('Updated rateLimited to:', serverRateLimit.remaining === 0);
-        
-        // If we have a stored API call count, use that instead if it's higher
-        if (storedApiCallCount) {
-          const parsedCount = parseInt(storedApiCallCount, 10);
-          if (!isNaN(parsedCount) && parsedCount > serverRateLimit.used) {
-            console.log(`Using stored API call count (${parsedCount}) instead of server count (${serverRateLimit.used})`);
-            setExecutionCount(parsedCount);
-          }
+        // If we don't have valid stored info, get it from the server
+        if (!localRateLimit) {
+          // Get the current rate limit status from the server
+          const serverRateLimit = await OpenAIService.getRateLimitStatus();
+          console.log('Received server rate limit:', serverRateLimit);
+          
+          // Update the client-side state with the server-side information
+          setRateLimitInfo(serverRateLimit);
+          setExecutionCount(serverRateLimit.used);
+          setRateLimited(serverRateLimit.remaining === 0);
+          
+          console.log('Updated state with server rate limit info');
         }
       } catch (error) {
         console.error('Error synchronizing with server rate limit:', error);
