@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { CheckCircle2, Pencil, Timer, Trash2, Star, GripVertical } from 'lucide-react';
 import { SubtaskProps } from '../types';
 
 function Subtask({ subtask, taskId, boardId, onToggleComplete, editing, startEditing, handleEditSave, onDeleteTask, updateTaskPriority }: SubtaskProps) {
   const isEditing = editing.taskId === taskId && editing.subtaskId === subtask.id;
+  const [showTooltip, setShowTooltip] = useState(false);
 
   // Show rating as stars
   const renderRating = () => {
@@ -49,20 +50,20 @@ function Subtask({ subtask, taskId, boardId, onToggleComplete, editing, startEdi
             subtask.completed
               ? 'line-through text-gray-400'
               : 'text-gray-700 hover:text-gray-900'
-          } cursor-pointer transition-colors duration-200 truncate mr-1 group relative`}
+          } cursor-pointer transition-colors duration-200 truncate mr-1 relative`}
           onClick={() => startEditing(taskId, subtask.id, 'title', subtask.title)}
+          onMouseEnter={() => setShowTooltip(true)}
+          onMouseLeave={() => setShowTooltip(false)}
         >
           {subtask.title}
           {subtask.feedback && renderRating()}
           
-          {/* Fast-appearing custom tooltip */}
-          <div className="absolute left-0 top-full mt-1 z-50 bg-gray-800 text-white text-xs rounded p-2 shadow-lg max-w-xs whitespace-normal break-words opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-100 pointer-events-none">
-            {subtask.title}
-          </div>
-          {/* Enhanced tooltip for better UX */}
-          <div className="absolute left-0 top-full mt-1 z-50 bg-gray-800 text-white text-xs rounded p-2 shadow-lg max-w-xs whitespace-normal break-words opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
-            {subtask.title}
-          </div>
+          {/* JavaScript-based immediate tooltip */}
+          {showTooltip && (
+            <div className="absolute left-0 top-full mt-1 z-50 bg-gray-800 text-white text-xs rounded p-2 shadow-lg max-w-xs whitespace-normal break-words pointer-events-none">
+              {subtask.title}
+            </div>
+          )}
         </div>
       )}
       

@@ -651,30 +651,80 @@ export function useTasks() {
     setActiveTask(taskId);
     setGenerating(true);
     
+    // Determine the appropriate number of subtasks based on task complexity
+    const determineSubtaskCount = (task: any) => {
+      const title = task.title.toLowerCase();
+      const context = task.context ? task.context.toLowerCase() : '';
+      const combinedText = title + ' ' + context;
+      
+      // Check for complex tasks that likely need more subtasks
+      if (
+        combinedText.includes('project') ||
+        combinedText.includes('plan') ||
+        combinedText.includes('strategy') ||
+        combinedText.includes('campaign') ||
+        combinedText.includes('recipe') ||
+        combinedText.includes('comprehensive') ||
+        combinedText.includes('complete') ||
+        combinedText.includes('detailed')
+      ) {
+        return 5; // More complex tasks get more subtasks
+      }
+      
+      // Check for medium complexity tasks
+      if (
+        combinedText.includes('create') ||
+        combinedText.includes('develop') ||
+        combinedText.includes('implement') ||
+        combinedText.includes('organize') ||
+        combinedText.includes('prepare')
+      ) {
+        return 4; // Medium complexity tasks
+      }
+      
+      // Simple tasks get fewer subtasks
+      if (
+        combinedText.includes('check') ||
+        combinedText.includes('review') ||
+        combinedText.includes('simple') ||
+        combinedText.includes('quick') ||
+        combinedText.includes('basic')
+      ) {
+        return 3; // Simple tasks
+      }
+      
+      // Default to 4 subtasks if we can't determine complexity
+      return 4;
+    };
+    
+    // Set the breakdown level based on task complexity
+    const intelligentBreakdownLevel = determineSubtaskCount(task);
+    setBreakdownLevel(intelligentBreakdownLevel);
+    
     try {
       // Create a prompt based on the selected use case
-      let systemPrompt = `You are a task management AI assistant. Break down tasks into specific, actionable subtasks. Provide ${breakdownLevel} subtasks. Return ONLY a JSON array of subtasks in the format [{"title": "Subtask title", "estimatedTime": 0.5, "priority": "low|medium|high"}].`;
-      let userPrompt = `Break down this task into ${breakdownLevel} specific, actionable subtasks: "${task.title}"${task.context ? `\nContext: ${task.context}` : ''}`;
+      let systemPrompt = `You are a task management AI assistant. Break down tasks into specific, actionable subtasks. Provide ${intelligentBreakdownLevel} subtasks. Return ONLY a JSON array of subtasks in the format [{"title": "Subtask title", "estimatedTime": 0.5, "priority": "low|medium|high"}].`;
+      let userPrompt = `Break down this task into ${intelligentBreakdownLevel} specific, actionable subtasks: "${task.title}"${task.context ? `\nContext: ${task.context}` : ''}`;
       
       // Customize prompts based on use case
       if (selectedUseCase === 'recipe' && task.title.toLowerCase().includes('recipe')) {
         systemPrompt = `You are a culinary expert. Break down recipes into clear steps with detailed ingredients (including exact measurements like "2 eggs", "1 cup flour") and cooking instructions. Return ONLY a JSON array in the format [{"title": "Step description", "estimatedTime": time_in_minutes, "priority": "low|medium|high"}].`;
-        userPrompt = `Break down this recipe into ${breakdownLevel} cooking steps: "${task.title}". First, list all ingredients with exact measurements (e.g., 2 eggs, 1 cup flour, 2 tbsp butter), then include detailed preparation and cooking instructions.${task.context ? `\nContext: ${task.context}` : ''}`;
+        userPrompt = `Break down this recipe into ${intelligentBreakdownLevel} cooking steps: "${task.title}". First, list all ingredients with exact measurements (e.g., 2 eggs, 1 cup flour, 2 tbsp butter), then include detailed preparation and cooking instructions.${task.context ? `\nContext: ${task.context}` : ''}`;
       } else if (selectedUseCase === 'marketing') {
         systemPrompt = `You are a marketing strategist. Break down marketing tasks into actionable project steps with clear deliverables. Return ONLY a JSON array in the format [{"title": "Step with deliverable", "estimatedTime": time_in_hours, "priority": "low|medium|high"}].`;
-        userPrompt = `Break down this marketing task into ${breakdownLevel} actionable project steps: "${task.title}". Include specific deliverables, timeline, and success metrics for each step.${task.context ? `\nContext: ${task.context}` : ''}`;
+        userPrompt = `Break down this marketing task into ${intelligentBreakdownLevel} actionable project steps: "${task.title}". Include specific deliverables, timeline, and success metrics for each step.${task.context ? `\nContext: ${task.context}` : ''}`;
       } else if (selectedUseCase === 'goals') {
         systemPrompt = `You are a goal-setting and personal development expert. Break down goals into actionable steps with measurable outcomes. Return ONLY a JSON array in the format [{"title": "Step description", "estimatedTime": time_in_days, "priority": "low|medium|high"}].`;
-        userPrompt = `Break down this goal into ${breakdownLevel} actionable steps: "${task.title}". Include specific milestones, tracking methods, and success criteria for each step.${task.context ? `\nContext: ${task.context}` : ''}`;
+        userPrompt = `Break down this goal into ${intelligentBreakdownLevel} actionable steps: "${task.title}". Include specific milestones, tracking methods, and success criteria for each step.${task.context ? `\nContext: ${task.context}` : ''}`;
       } else if (selectedUseCase === 'home') {
         systemPrompt = `You are a home organization and maintenance expert. Break down home tasks into detailed steps with required materials. Return ONLY a JSON array in the format [{"title": "Step description", "estimatedTime": time_in_minutes, "priority": "low|medium|high"}].`;
-        userPrompt = `Break down this home task into ${breakdownLevel} detailed steps: "${task.title}". Include required materials, tools, and specific instructions for each step.${task.context ? `\nContext: ${task.context}` : ''}`;
+        userPrompt = `Break down this home task into ${intelligentBreakdownLevel} detailed steps: "${task.title}". Include required materials, tools, and specific instructions for each step.${task.context ? `\nContext: ${task.context}` : ''}`;
       } else if (selectedUseCase === 'travel') {
         systemPrompt = `You are a travel planning expert. Break down travel plans into detailed preparation and itinerary steps. Return ONLY a JSON array in the format [{"title": "Step description", "estimatedTime": time_in_hours_or_days, "priority": "low|medium|high"}].`;
-        userPrompt = `Break down this travel plan into ${breakdownLevel} detailed steps: "${task.title}". Include preparation tasks, booking details, and daily itinerary items.${task.context ? `\nContext: ${task.context}` : ''}`;
+        userPrompt = `Break down this travel plan into ${intelligentBreakdownLevel} detailed steps: "${task.title}". Include preparation tasks, booking details, and daily itinerary items.${task.context ? `\nContext: ${task.context}` : ''}`;
       } else if (selectedUseCase === 'study') {
         systemPrompt = `You are an educational expert. Break down study plans into focused learning sessions with specific objectives. Return ONLY a JSON array in the format [{"title": "Study session description", "estimatedTime": time_in_hours, "priority": "low|medium|high"}].`;
-        userPrompt = `Break down this study plan into ${breakdownLevel} focused learning sessions: "${task.title}". Include specific learning objectives, resources to use, and study techniques for each session.${task.context ? `\nContext: ${task.context}` : ''}`;
+        userPrompt = `Break down this study plan into ${intelligentBreakdownLevel} focused learning sessions: "${task.title}". Include specific learning objectives, resources to use, and study techniques for each session.${task.context ? `\nContext: ${task.context}` : ''}`;
       }
       
       // Use OpenAIService to make the request through the proxy
