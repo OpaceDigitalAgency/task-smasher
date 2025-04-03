@@ -44,17 +44,22 @@ function Subtask({ subtask, taskId, boardId, onToggleComplete, editing, startEdi
           />
         </div>
       ) : (
-        <div 
+        <div
           className={`flex-grow text-sm ${
-            subtask.completed 
-              ? 'line-through text-gray-400' 
+            subtask.completed
+              ? 'line-through text-gray-400'
               : 'text-gray-700 hover:text-gray-900'
-          } cursor-pointer transition-colors duration-200 truncate mr-1`}
+          } cursor-pointer transition-colors duration-200 truncate mr-1 group relative`}
           onClick={() => startEditing(taskId, subtask.id, 'title', subtask.title)}
           title={subtask.title}
         >
           {subtask.title}
           {subtask.feedback && renderRating()}
+          
+          {/* Enhanced tooltip for better UX */}
+          <div className="absolute left-0 top-full mt-1 z-50 bg-gray-800 text-white text-xs rounded p-2 shadow-lg max-w-xs whitespace-normal break-words opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+            {subtask.title}
+          </div>
         </div>
       )}
       

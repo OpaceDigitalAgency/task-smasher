@@ -40,7 +40,8 @@ export const useCaseDefinitions: Record<string, UseCaseDefinition> = {
       "marketing", "campaign", "social media", "post", "content", "email",
       "newsletter", "audience", "engagement", "analytics", "metrics",
       "conversion", "lead", "customer", "brand", "seo", "advertising",
-      "promotion", "launch", "strategy", "market", "competitor", "website"
+      "promotion", "launch", "strategy", "market", "competitor", "website",
+      "web design", "web development", "UI", "UX", "user interface", "user experience"
     ],
     negativeKeywords: [
       "recipe", "cook", "ingredient", "diy", "build", "paint",

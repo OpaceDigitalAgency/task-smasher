@@ -125,14 +125,19 @@ function Task({
             ) : (
               <h3
                 className={`text-base font-medium ${
-                  task.completed 
-                    ? 'line-through text-gray-400' 
+                  task.completed
+                    ? 'line-through text-gray-400'
                     : 'text-gray-800 hover:text-gray-900'
-                } cursor-pointer transition-colors duration-200 truncate`}
+                } cursor-pointer transition-colors duration-200 truncate group relative`}
                 onClick={() => startEditing(task.id, null, 'title', task.title)}
                 title={task.title}
               >
                 {task.title}
+                
+                {/* Enhanced tooltip for better UX */}
+                <div className="absolute left-0 top-full mt-1 z-50 bg-gray-800 text-white text-sm rounded p-2 shadow-lg max-w-xs whitespace-normal break-words opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                  {task.title}
+                </div>
               </h3>
             )}
             

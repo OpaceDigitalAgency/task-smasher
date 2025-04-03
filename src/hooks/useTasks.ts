@@ -658,8 +658,8 @@ export function useTasks() {
       
       // Customize prompts based on use case
       if (selectedUseCase === 'recipe' && task.title.toLowerCase().includes('recipe')) {
-        systemPrompt = `You are a culinary expert. Break down recipes into clear steps with ingredients and cooking instructions. Return ONLY a JSON array in the format [{"title": "Step description", "estimatedTime": time_in_minutes, "priority": "low|medium|high"}].`;
-        userPrompt = `Break down this recipe into ${breakdownLevel} cooking steps: "${task.title}". Include ingredient preparation and cooking instructions.${task.context ? `\nContext: ${task.context}` : ''}`;
+        systemPrompt = `You are a culinary expert. Break down recipes into clear steps with detailed ingredients (including exact measurements like "2 eggs", "1 cup flour") and cooking instructions. Return ONLY a JSON array in the format [{"title": "Step description", "estimatedTime": time_in_minutes, "priority": "low|medium|high"}].`;
+        userPrompt = `Break down this recipe into ${breakdownLevel} cooking steps: "${task.title}". First, list all ingredients with exact measurements (e.g., 2 eggs, 1 cup flour, 2 tbsp butter), then include detailed preparation and cooking instructions.${task.context ? `\nContext: ${task.context}` : ''}`;
       } else if (selectedUseCase === 'marketing') {
         systemPrompt = `You are a marketing strategist. Break down marketing tasks into actionable project steps with clear deliverables. Return ONLY a JSON array in the format [{"title": "Step with deliverable", "estimatedTime": time_in_hours, "priority": "low|medium|high"}].`;
         userPrompt = `Break down this marketing task into ${breakdownLevel} actionable project steps: "${task.title}". Include specific deliverables for each step.${task.context ? `\nContext: ${task.context}` : ''}`;
@@ -782,8 +782,8 @@ export function useTasks() {
       
       // Customize prompts based on use case
       if (selectedUseCase === 'recipe') {
-        systemPrompt = 'You are a culinary expert that creates detailed cooking recipes. For each recipe, include a title followed by ingredients and step-by-step instructions.';
-        userPrompt = 'Generate 5 recipe ideas with ingredients and cooking steps. Format each recipe with a clear title, ingredients list, and numbered steps.';
+        systemPrompt = 'You are a culinary expert that creates detailed cooking recipes. For each recipe, include a title followed by a detailed ingredients list with precise measurements (e.g., 2 eggs, 1 cup flour, 2 tbsp butter) and step-by-step instructions.';
+        userPrompt = 'Generate 5 recipe ideas with specific ingredients (including exact measurements) and cooking steps. Format each recipe with a clear title, detailed ingredients list with measurements, and numbered steps.';
       } else if (selectedUseCase === 'marketing') {
         systemPrompt = 'You are a marketing strategist that creates actionable marketing project plans. Each plan should have clear objectives and implementation steps.';
         userPrompt = 'Generate 5 marketing campaign ideas with specific objectives and implementation steps. Format each as a mini project plan.';
