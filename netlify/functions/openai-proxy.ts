@@ -1,9 +1,8 @@
 import { Handler, HandlerEvent, HandlerContext } from "@netlify/functions";
 import OpenAI from "openai";
 
-// Import Node.js file system module for persistent storage
-import * as fs from 'fs';
-import * as path from 'path';
+// Import Netlify's KV store client
+import { getStore } from "@netlify/blobs";
 
 // Rate limit configuration
 const RATE_LIMIT = 20; // 20 requests per IP per day
@@ -20,80 +19,52 @@ interface RateLimitStore {
   [ip: string]: RateLimitEntry;
 }
 
-// Path to the rate limit store file
-// Using a more persistent location for the rate limit store
-// In production, this should be replaced with a database or KV store
-const RATE_LIMIT_STORE_PATH = process.env.NETLIFY
-  ? path.join('/tmp', 'persistent-rate-limit-store.json')
-  : path.join(process.cwd(), '.netlify', 'rate-limit-store.json');
+// Store name for rate limits
+const RATE_LIMIT_STORE_NAME = "rate-limits";
 
-// Function to load the rate limit store from file with better error handling
-function loadRateLimitStore(): RateLimitStore {
+// Function to get the KV store
+function getRateLimitStore() {
+  return getStore(RATE_LIMIT_STORE_NAME);
+}
+
+// Function to load the rate limit store from KV store
+async function loadRateLimitStore(): Promise<RateLimitStore> {
   try {
-    // Ensure directory exists
-    const dir = path.dirname(RATE_LIMIT_STORE_PATH);
-    if (!fs.existsSync(dir)) {
-      try {
-        fs.mkdirSync(dir, { recursive: true });
-      } catch (mkdirError) {
-        console.error('Error creating directory:', mkdirError);
-      }
-    }
+    const store = getRateLimitStore();
+    const data = await store.get("rate-limits");
     
-    if (fs.existsSync(RATE_LIMIT_STORE_PATH)) {
-      const data = fs.readFileSync(RATE_LIMIT_STORE_PATH, 'utf8');
+    if (data) {
       try {
-        return JSON.parse(data);
+        return JSON.parse(data as string);
       } catch (parseError) {
         console.error('Error parsing rate limit store:', parseError);
-        // If file is corrupted, create a backup and return empty store
-        try {
-          const backupPath = `${RATE_LIMIT_STORE_PATH}.backup.${Date.now()}`;
-          fs.copyFileSync(RATE_LIMIT_STORE_PATH, backupPath);
-          console.log(`Corrupted rate limit store backed up to ${backupPath}`);
-        } catch (backupError) {
-          console.error('Error backing up corrupted store:', backupError);
-        }
       }
     }
   } catch (error) {
-    console.error('Error loading rate limit store:', error);
+    console.error('Error loading rate limit store from KV:', error);
   }
   return {};
 }
 
-// Function to save the rate limit store to file with better error handling
-function saveRateLimitStore(store: RateLimitStore): void {
+// Function to save the rate limit store to KV store
+async function saveRateLimitStore(store: RateLimitStore): Promise<void> {
   try {
-    // Ensure directory exists
-    const dir = path.dirname(RATE_LIMIT_STORE_PATH);
-    if (!fs.existsSync(dir)) {
-      try {
-        fs.mkdirSync(dir, { recursive: true });
-      } catch (mkdirError) {
-        console.error('Error creating directory:', mkdirError);
-        return;
-      }
-    }
-    
-    // Write to a temporary file first, then rename to avoid corruption
-    const tempPath = `${RATE_LIMIT_STORE_PATH}.tmp`;
-    fs.writeFileSync(tempPath, JSON.stringify(store), 'utf8');
-    fs.renameSync(tempPath, RATE_LIMIT_STORE_PATH);
+    const kvStore = getRateLimitStore();
+    await kvStore.set("rate-limits", JSON.stringify(store));
   } catch (error) {
-    console.error('Error saving rate limit store:', error);
+    console.error('Error saving rate limit store to KV:', error);
   }
 }
 
-// Load the rate limit store
-let rateLimitStore: RateLimitStore = loadRateLimitStore();
+// Initialize an empty store (will be loaded when needed)
+let rateLimitStore: RateLimitStore = {};
 
 // Function to check and update rate limit
-function checkRateLimit(ip: string): { allowed: boolean; remaining: number; resetTime: number; total: number } {
+async function checkRateLimit(ip: string): Promise<{ allowed: boolean; remaining: number; resetTime: number; total: number }> {
   const now = Date.now();
   
   // Reload the store to get the latest data
-  rateLimitStore = loadRateLimitStore();
+  rateLimitStore = await loadRateLimitStore();
   
   // Clean up expired entries
   let cleanupPerformed = false;
@@ -106,7 +77,7 @@ function checkRateLimit(ip: string): { allowed: boolean; remaining: number; rese
   
   // Save the store if we cleaned up any entries
   if (cleanupPerformed) {
-    saveRateLimitStore(rateLimitStore);
+    await saveRateLimitStore(rateLimitStore);
   }
   
   // Check if IP exists in store
@@ -116,7 +87,7 @@ function checkRateLimit(ip: string): { allowed: boolean; remaining: number; rese
       count: 1,
       resetTime: now + RATE_LIMIT_WINDOW
     };
-    saveRateLimitStore(rateLimitStore);
+    await saveRateLimitStore(rateLimitStore);
     return {
       allowed: true,
       remaining: RATE_LIMIT - 1,
@@ -137,7 +108,7 @@ function checkRateLimit(ip: string): { allowed: boolean; remaining: number; rese
   
   // Increment count
   rateLimitStore[ip].count += 1;
-  saveRateLimitStore(rateLimitStore);
+  await saveRateLimitStore(rateLimitStore);
   
   return {
     allowed: true,
@@ -162,7 +133,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
   // Check rate limit
   const rateLimitResult = isLocalDev ?
     { allowed: true, remaining: RATE_LIMIT - 1, resetTime: Date.now() + RATE_LIMIT_WINDOW, total: RATE_LIMIT } :
-    checkRateLimit(clientIP);
+    await checkRateLimit(clientIP);
   
   if (!rateLimitResult.allowed) {
     const resetDate = new Date(rateLimitResult.resetTime).toISOString();
