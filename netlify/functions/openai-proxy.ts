@@ -1,30 +1,113 @@
 import { Handler, HandlerEvent, HandlerContext } from "@netlify/functions";
 import OpenAI from "openai";
 
-// In-memory store for rate limiting
-// Note: This will reset when the function is redeployed or goes cold
-// For production, consider using a more persistent solution like Redis or DynamoDB
+// Import Node.js file system module for persistent storage
+import * as fs from 'fs';
+import * as path from 'path';
+
+// Rate limit configuration
+const RATE_LIMIT = 20; // 20 requests per IP per day
+const RATE_LIMIT_WINDOW = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+
+// Interface for rate limit entries
 interface RateLimitEntry {
   count: number;
   resetTime: number;
 }
 
-const rateLimitStore: Record<string, RateLimitEntry> = {};
+// Interface for rate limit store
+interface RateLimitStore {
+  [ip: string]: RateLimitEntry;
+}
 
-// Rate limit configuration
-const RATE_LIMIT = 20; // 20 requests per hour
-const RATE_LIMIT_WINDOW = 60 * 60 * 1000; // 1 hour in milliseconds
+// Path to the rate limit store file
+// Using a more persistent location for the rate limit store
+// In production, this should be replaced with a database or KV store
+const RATE_LIMIT_STORE_PATH = process.env.NETLIFY
+  ? path.join('/tmp', 'persistent-rate-limit-store.json')
+  : path.join(process.cwd(), '.netlify', 'rate-limit-store.json');
+
+// Function to load the rate limit store from file with better error handling
+function loadRateLimitStore(): RateLimitStore {
+  try {
+    // Ensure directory exists
+    const dir = path.dirname(RATE_LIMIT_STORE_PATH);
+    if (!fs.existsSync(dir)) {
+      try {
+        fs.mkdirSync(dir, { recursive: true });
+      } catch (mkdirError) {
+        console.error('Error creating directory:', mkdirError);
+      }
+    }
+    
+    if (fs.existsSync(RATE_LIMIT_STORE_PATH)) {
+      const data = fs.readFileSync(RATE_LIMIT_STORE_PATH, 'utf8');
+      try {
+        return JSON.parse(data);
+      } catch (parseError) {
+        console.error('Error parsing rate limit store:', parseError);
+        // If file is corrupted, create a backup and return empty store
+        try {
+          const backupPath = `${RATE_LIMIT_STORE_PATH}.backup.${Date.now()}`;
+          fs.copyFileSync(RATE_LIMIT_STORE_PATH, backupPath);
+          console.log(`Corrupted rate limit store backed up to ${backupPath}`);
+        } catch (backupError) {
+          console.error('Error backing up corrupted store:', backupError);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error loading rate limit store:', error);
+  }
+  return {};
+}
+
+// Function to save the rate limit store to file with better error handling
+function saveRateLimitStore(store: RateLimitStore): void {
+  try {
+    // Ensure directory exists
+    const dir = path.dirname(RATE_LIMIT_STORE_PATH);
+    if (!fs.existsSync(dir)) {
+      try {
+        fs.mkdirSync(dir, { recursive: true });
+      } catch (mkdirError) {
+        console.error('Error creating directory:', mkdirError);
+        return;
+      }
+    }
+    
+    // Write to a temporary file first, then rename to avoid corruption
+    const tempPath = `${RATE_LIMIT_STORE_PATH}.tmp`;
+    fs.writeFileSync(tempPath, JSON.stringify(store), 'utf8');
+    fs.renameSync(tempPath, RATE_LIMIT_STORE_PATH);
+  } catch (error) {
+    console.error('Error saving rate limit store:', error);
+  }
+}
+
+// Load the rate limit store
+let rateLimitStore: RateLimitStore = loadRateLimitStore();
 
 // Function to check and update rate limit
-function checkRateLimit(ip: string): { allowed: boolean; remaining: number; resetTime: number } {
+function checkRateLimit(ip: string): { allowed: boolean; remaining: number; resetTime: number; total: number } {
   const now = Date.now();
   
+  // Reload the store to get the latest data
+  rateLimitStore = loadRateLimitStore();
+  
   // Clean up expired entries
+  let cleanupPerformed = false;
   Object.keys(rateLimitStore).forEach(key => {
     if (rateLimitStore[key].resetTime < now) {
       delete rateLimitStore[key];
+      cleanupPerformed = true;
     }
   });
+  
+  // Save the store if we cleaned up any entries
+  if (cleanupPerformed) {
+    saveRateLimitStore(rateLimitStore);
+  }
   
   // Check if IP exists in store
   if (!rateLimitStore[ip] || rateLimitStore[ip].resetTime < now) {
@@ -33,20 +116,34 @@ function checkRateLimit(ip: string): { allowed: boolean; remaining: number; rese
       count: 1,
       resetTime: now + RATE_LIMIT_WINDOW
     };
-    return { allowed: true, remaining: RATE_LIMIT - 1, resetTime: rateLimitStore[ip].resetTime };
+    saveRateLimitStore(rateLimitStore);
+    return {
+      allowed: true,
+      remaining: RATE_LIMIT - 1,
+      resetTime: rateLimitStore[ip].resetTime,
+      total: RATE_LIMIT
+    };
   }
   
   // Check if rate limit exceeded
   if (rateLimitStore[ip].count >= RATE_LIMIT) {
-    return { allowed: false, remaining: 0, resetTime: rateLimitStore[ip].resetTime };
+    return {
+      allowed: false,
+      remaining: 0,
+      resetTime: rateLimitStore[ip].resetTime,
+      total: RATE_LIMIT
+    };
   }
   
   // Increment count
   rateLimitStore[ip].count += 1;
-  return { 
-    allowed: true, 
+  saveRateLimitStore(rateLimitStore);
+  
+  return {
+    allowed: true,
     remaining: RATE_LIMIT - rateLimitStore[ip].count,
-    resetTime: rateLimitStore[ip].resetTime
+    resetTime: rateLimitStore[ip].resetTime,
+    total: RATE_LIMIT
   };
 }
 
@@ -65,13 +162,14 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       statusCode: 429,
       headers: {
         "Content-Type": "application/json",
-        "X-RateLimit-Limit": RATE_LIMIT.toString(),
+        "X-RateLimit-Limit": rateLimitResult.total.toString(),
         "X-RateLimit-Remaining": "0",
-        "X-RateLimit-Reset": resetDate
+        "X-RateLimit-Reset": resetDate,
+        "X-RateLimit-Used": rateLimitResult.total.toString()
       },
       body: JSON.stringify({
         error: "Rate limit exceeded",
-        message: `You have exceeded the rate limit of ${RATE_LIMIT} requests per hour. Please try again after ${resetDate}.`
+        message: `You have exceeded the rate limit of ${RATE_LIMIT} requests per day. Please try again after ${resetDate}.`
       })
     };
   }
@@ -123,9 +221,10 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       statusCode: 200,
       headers: {
         "Content-Type": "application/json",
-        "X-RateLimit-Limit": RATE_LIMIT.toString(),
+        "X-RateLimit-Limit": rateLimitResult.total.toString(),
         "X-RateLimit-Remaining": rateLimitResult.remaining.toString(),
-        "X-RateLimit-Reset": new Date(rateLimitResult.resetTime).toISOString()
+        "X-RateLimit-Reset": new Date(rateLimitResult.resetTime).toISOString(),
+        "X-RateLimit-Used": (rateLimitResult.total - rateLimitResult.remaining).toString()
       },
       body: JSON.stringify(response)
     };
@@ -136,9 +235,10 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       statusCode: 500,
       headers: {
         "Content-Type": "application/json",
-        "X-RateLimit-Limit": RATE_LIMIT.toString(),
+        "X-RateLimit-Limit": rateLimitResult.total.toString(),
         "X-RateLimit-Remaining": rateLimitResult.remaining.toString(),
-        "X-RateLimit-Reset": new Date(rateLimitResult.resetTime).toISOString()
+        "X-RateLimit-Reset": new Date(rateLimitResult.resetTime).toISOString(),
+        "X-RateLimit-Used": (rateLimitResult.total - rateLimitResult.remaining).toString()
       },
       body: JSON.stringify({
         error: "Internal server error",

@@ -51,6 +51,7 @@ interface RateLimitInfo {
   limit: number;
   remaining: number;
   reset: Date;
+  used: number;
 }
 
 /**
@@ -80,9 +81,10 @@ export const OpenAIService = {
 
       // Extract rate limit information from headers
       const rateLimit: RateLimitInfo = {
-        limit: parseInt(response.headers.get('X-RateLimit-Limit') || '5', 10),
+        limit: parseInt(response.headers.get('X-RateLimit-Limit') || '20', 10),
         remaining: parseInt(response.headers.get('X-RateLimit-Remaining') || '0', 10),
         reset: new Date(response.headers.get('X-RateLimit-Reset') || Date.now() + 3600000),
+        used: parseInt(response.headers.get('X-RateLimit-Used') || '0', 10)
       };
 
       // Handle rate limit exceeded
@@ -150,9 +152,10 @@ export const OpenAIService = {
         const resetTime = resetTimeMatch ? new Date(resetTimeMatch[1]) : new Date(Date.now() + 3600000);
         
         return {
-          limit: 5,
+          limit: 20,
           remaining: 0,
           reset: resetTime,
+          used: 20
         };
       }
       

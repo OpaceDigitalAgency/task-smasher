@@ -27,6 +27,7 @@ function App() {
     setSelectedModel,
     totalCost,
     rateLimited,
+    rateLimitInfo,
     executionCount,
     boards,
     setBoards,
@@ -234,16 +235,21 @@ function App() {
             <div className="flex items-center gap-6">
               <div className="flex items-center gap-2 text-sm">
                 <Zap className="w-4 h-4 text-yellow-500" />
-                <span className="text-gray-600">Executions: {executionCount}</span>
+                <span className="text-gray-600">API Calls: {executionCount}</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <DollarSign className="w-4 h-4 text-green-500" />
                 <span className="text-gray-600">Estimated cost: ${totalCost.toFixed(4)}</span>
               </div>
-              {typeof rateLimited !== 'undefined' && rateLimited && (
+              {typeof rateLimited !== 'undefined' && rateLimited ? (
                 <div className="flex items-center gap-2 text-sm bg-red-50 text-red-600 px-2 py-1 rounded-md">
                   <Info className="w-4 h-4" />
-                  <span>Rate limit reached (20/hour)</span>
+                  <span>API Limit Reached! Reset at {new Date(rateLimitInfo.reset).toLocaleTimeString()}</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-sm bg-blue-50 text-blue-600 px-2 py-1 rounded-md">
+                  <Info className="w-4 h-4" />
+                  <span>API Usage: {rateLimitInfo.used} of {rateLimitInfo.limit} (Remaining: {rateLimitInfo.remaining})</span>
                 </div>
               )}
             </div>
@@ -517,7 +523,8 @@ function App() {
                   onToggleExpanded={toggleExpanded}
                   onToggleComplete={toggleComplete}
                   onShowFeedback={showFeedback}
-                  onDeleteTask={deleteTask}
+                  onDelete={deleteTask}
+                  onDelete={deleteTask}
                   onGenerateSubtasks={handleGenerateSubtasks}
                   onAddSubtask={addSubtask}
                   onRegenerateTask={regenerateTask}
@@ -547,7 +554,7 @@ function App() {
                   onToggleExpanded={toggleExpanded}
                   onToggleComplete={toggleComplete}
                   onShowFeedback={showFeedback}
-                  onDeleteTask={deleteTask}
+                  onDelete={deleteTask}
                   onGenerateSubtasks={handleGenerateSubtasks}
                   onAddSubtask={addSubtask}
                   onRegenerateTask={regenerateTask}

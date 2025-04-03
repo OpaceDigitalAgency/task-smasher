@@ -1,16 +1,22 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Board, EditingState, FeedbackState, Task, TaskMismatchData } from '../types';
+import { Board, EditingState, FeedbackState, Task, TaskMismatchData, TasksContextType, RateLimitInfo } from '../types';
 import { filterTasksByPriority, filterTasksByRating } from '../utils/taskUtils';
 import { validateTaskLocally, validateTaskWithAI } from '../utils/taskContextValidator';
 import OpenAIService from '../utils/openaiService';
 
-export function useTasks() {
+export function useTasks(): TasksContextType {
   // Removed openAIKey state as we're now using the proxy
   const [selectedModel, setSelectedModel] = useState('gpt-3.5-turbo');
   const [totalCost, setTotalCost] = useState(0);
   const [executionCount, setExecutionCount] = useState(0);
   const [selectedUseCase, setSelectedUseCase] = useState<string | null>('daily');
   const [rateLimited, setRateLimited] = useState(false);
+  const [rateLimitInfo, setRateLimitInfo] = useState<{ limit: number; remaining: number; used: number; reset: Date }>({
+    limit: 20,
+    remaining: 20,
+    used: 0,
+    reset: new Date(Date.now() + 3600000)
+  });
   
   const [boards, setBoards] = useState<Board[]>([
     { id: 'todo', title: 'To Do', tasks: [] },
@@ -843,7 +849,12 @@ Make sure to include all necessary ingredients with precise measurements before 
   }, [boards]);
   
   const handleGenerateIdeas = async () => {
+    // Set generating state to true to show loading indicator
+    setGenerating(true);
+    
     try {
+      console.log("Generating ideas for use case:", selectedUseCase);
+      
       // Use OpenAIService to make the request through the proxy
       // Create a prompt based on the selected use case
       let systemPrompt = 'You are a helpful assistant that generates creative task ideas. Return a list of 5 task ideas, one per line, no numbers or bullets.';
@@ -870,6 +881,8 @@ Make sure to include all necessary ingredients with precise measurements before 
         userPrompt = 'Generate 5 study plan ideas with specific subjects, learning objectives, study techniques, and resource recommendations for each plan.';
       }
       
+      console.log("Sending request to OpenAI with model:", selectedModel);
+      
       const { data, rateLimit } = await OpenAIService.createChatCompletion({
         model: selectedModel,
         messages: [
@@ -884,32 +897,55 @@ Make sure to include all necessary ingredients with precise measurements before 
         ]
       });
       
+      console.log("Received response from OpenAI:", data);
+      
+      // Update rate limit information
+      setRateLimitInfo(rateLimit);
+      
       // Update rate limit status
       if (rateLimit.remaining === 0) {
         setRateLimited(true);
+        console.log("Rate limit reached");
       }
       
-      if (data.choices && data.choices[0]) {
-        // Parse the response into an array of ideas
-        const responseText = data.choices[0].message.content;
-        const ideas = responseText
-          .split('\n')
-          .filter(line => line.trim().length > 0)
-          .map(line => line.replace(/^\d+\.\s*|-\s*|\*\s*/, '').trim());
-        
-        setHistory(prev => [...prev, boards]);
-        
-        setBoards(prevBoards => {
-          const todoBoard = prevBoards.find(board => board.id === 'todo');
-          if (!todoBoard) return prevBoards;
+      if (!data.choices || !data.choices[0]) {
+        console.error("No choices in OpenAI response");
+        alert("Failed to generate ideas. Please try again.");
+        setGenerating(false);
+        return;
+      }
+      
+      // Parse the response into an array of ideas
+      const responseText = data.choices[0].message.content;
+      console.log("Response text:", responseText);
+      
+      const ideas = responseText
+        .split('\n')
+        .filter(line => line.trim().length > 0)
+        .map(line => line.replace(/^\d+\.\s*|-\s*|\*\s*/, '').trim());
+      
+      console.log("Parsed ideas:", ideas);
+      
+      if (ideas.length === 0) {
+        console.error("No ideas were parsed from the response");
+        alert("Failed to generate ideas. Please try again.");
+        setGenerating(false);
+        return;
+      }
+      
+      setHistory(prev => [...prev, boards]);
+      
+      setBoards(prevBoards => {
+        const todoBoard = prevBoards.find(board => board.id === 'todo');
+        if (!todoBoard) return prevBoards;
 
-          return prevBoards.map(board => 
-            board.id === 'todo' 
-              ? { 
-                  ...board, 
-                  tasks: [
-                    ...board.tasks, 
-                    ...ideas.map((idea, index) => ({
+        return prevBoards.map(board =>
+          board.id === 'todo'
+            ? {
+                ...board,
+                tasks: [
+                  ...board.tasks,
+                  ...ideas.map((idea, index) => ({
                       id: `task-${Date.now()}-${index}`,
                       title: idea,
                       subtasks: [],
@@ -927,7 +963,7 @@ Make sure to include all necessary ingredients with precise measurements before 
 
         setTotalCost(prev => prev + (data.usage?.total_tokens || 0) * 0.000002);
         setExecutionCount(prev => prev + 1);
-      }
+      
     } catch (error) {
       console.error('Error generating ideas:', error);
       
@@ -936,6 +972,9 @@ Make sure to include all necessary ingredients with precise measurements before 
         setRateLimited(true);
         alert('Rate limit exceeded. Please try again later.');
       }
+    } finally {
+      // Always set generating to false when done, regardless of success or failure
+      setGenerating(false);
     }
   };
   
@@ -952,8 +991,7 @@ Make sure to include all necessary ingredients with precise measurements before 
     return filteredTasks;
   }, [boards, filterPriority, filterRating]);
 
-  return {
-    // Removed openAIKey and setOpenAIKey
+  const result: TasksContextType = {
     selectedModel,
     setSelectedModel,
     totalCost,
@@ -986,7 +1024,8 @@ Make sure to include all necessary ingredients with precise measurements before 
     editing,
     taskMismatch,
     setTaskMismatch,
-    rateLimited, // Added rate limited state
+    rateLimited,
+    rateLimitInfo,
     handleAddTask,
     startEditing,
     handleEditSave,
@@ -1009,4 +1048,6 @@ Make sure to include all necessary ingredients with precise measurements before 
     deleteTask,
     getFilteredTasks
   };
+  
+  return result;
 }
