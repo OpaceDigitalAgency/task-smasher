@@ -34,7 +34,7 @@ const OpenAIExample: React.FC = () => {
       setRateLimit(rateLimit);
     } catch (err) {
       if (err instanceof Error && err.message.includes('Rate limit exceeded')) {
-        setError(`Rate limit exceeded. The API is limited to 5 requests per hour. Please try again later.`);
+        setError(`Rate limit exceeded. The API is limited to 20 requests per hour. Please try again later.`);
       } else {
         setError(err instanceof Error ? err.message : 'An unknown error occurred');
       }
@@ -52,7 +52,7 @@ const OpenAIExample: React.FC = () => {
       
       // Show a warning if rate limit is low
       if (rateLimitInfo.remaining === 0) {
-        setError(`Rate limit reached. You've used all 5 requests for this hour. Limit resets at ${rateLimitInfo.reset.toLocaleTimeString()}.`);
+        setError(`Rate limit reached. You've used all 20 requests for this hour. Limit resets at ${rateLimitInfo.reset.toLocaleTimeString()}.`);
       } else if (rateLimitInfo.remaining <= 2) {
         setError(`Warning: Only ${rateLimitInfo.remaining} requests remaining for this hour. Use them wisely!`);
       } else {
@@ -60,7 +60,7 @@ const OpenAIExample: React.FC = () => {
       }
     } catch (err) {
       if (err instanceof Error && err.message.includes('Rate limit exceeded')) {
-        setError(`Rate limit exceeded. The API is limited to 5 requests per hour. Please try again later.`);
+        setError(`Rate limit exceeded. The API is limited to 20 requests per hour. Please try again later.`);
       } else {
         setError(err instanceof Error ? err.message : 'Failed to check rate limit');
       }

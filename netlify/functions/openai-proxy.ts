@@ -12,7 +12,7 @@ interface RateLimitEntry {
 const rateLimitStore: Record<string, RateLimitEntry> = {};
 
 // Rate limit configuration
-const RATE_LIMIT = 5; // 5 requests per hour
+const RATE_LIMIT = 20; // 20 requests per hour
 const RATE_LIMIT_WINDOW = 60 * 60 * 1000; // 1 hour in milliseconds
 
 // Function to check and update rate limit
